@@ -1,47 +1,122 @@
-import typer
-from .simulator import run_tournament
-from .register import Registry
+"""
+Interfaz de línea de comandos (Typer).
+
+Tras `pip install -e .` queda disponible el comando `split-steal`
+(también `python -m split_steal`):
+
+    split-steal list                         # estrategias de un roster
+    split-steal tournament --seed 42         # juega un torneo y lo guarda en results/runs/
+    split-steal stats  results/runs/<run>    # tabla resumen por estrategia
+    split-steal plot   results/runs/<run>    # genera las gráficas en <run>/figs/
+
+Typer convierte los parámetros de cada función en opciones de terminal
+(`n_leagues` -> `--n-leagues`) y sus docstrings en la ayuda (`--help`).
+"""
+
+import sys
+from pathlib import Path
+
 import pandas as pd
+import typer
 
-def summarize(csv_path: str):
-    df = pd.read_csv(csv_path)
-    dfA = df[["A","pa","pb"]].rename(columns={"A":"name","pa":"score","pb":"opp"})
-    dfB = df[["B","pb","pa"]].rename(columns={"B":"name","pb":"score","pa":"opp"})
-    u   = pd.concat([dfA, dfB], ignore_index=True)
+# En Windows, si la salida se redirige (a un archivo o pipe) Python usa la
+# codificación cp1252, que no tiene algunos caracteres (p. ej. "→"). Con
+# errors="replace" se sustituyen por "?" en lugar de abortar el programa.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(errors="replace")
 
-    summary = (u.assign(win=(u["score"] > u["opp"]).astype(int),
-                        loss=(u["score"] < u["opp"]).astype(int),
-                        tie =(u["score"] == u["opp"]).astype(int))
-                 .groupby("name", as_index=False)
-                 .agg(matches=("score","size"),
-                      wins=("win","sum"),
-                      losses=("loss","sum"),
-                      ties=("tie","sum"),
-                      mean_payoff=("score","mean"),
-                      median_payoff=("score","median"))
-                 .sort_values(["mean_payoff","wins"], ascending=[False, False]))
-    return summary
+from .register import ROSTERS
+from .runner import TournamentConfig, load_run, run_tournament, save_run
 
-app = typer.Typer(help="Simulaciones Split/Steal (mínimas)")
+app = typer.Typer(help="Torneos de estrategias Split/Steal con ligas, ascensos y descensos.",
+                  no_args_is_help=True)
+
+
+def summarize(matches: pd.DataFrame) -> pd.DataFrame:
+    """
+    Resumen por estrategia a partir de la tabla de partidos (columnas A, B, pa, pb).
+
+    Cada partido aparece una vez con A y B; lo "desdoblamos" en dos filas (una por
+    estrategia, con su puntuación y la del rival) para poder agrupar por nombre.
+    """
+    side_a = matches[["A", "pa", "pb"]].rename(columns={"A": "name", "pa": "score", "pb": "opp"})
+    side_b = matches[["B", "pb", "pa"]].rename(columns={"B": "name", "pb": "score", "pa": "opp"})
+    u = pd.concat([side_a, side_b], ignore_index=True)
+
+    return (u.assign(win=(u["score"] > u["opp"]).astype(int),
+                     loss=(u["score"] < u["opp"]).astype(int),
+                     tie=(u["score"] == u["opp"]).astype(int))
+             .groupby("name", as_index=False)
+             .agg(matches=("score", "size"),
+                  wins=("win", "sum"),
+                  losses=("loss", "sum"),
+                  ties=("tie", "sum"),
+                  mean_payoff=("score", "mean"),
+                  median_payoff=("score", "median"))
+             .sort_values(["mean_payoff", "wins"], ascending=[False, False], ignore_index=True))
+
+
+@app.command("list")
+def list_strategies(roster: str = typer.Option("full", help="Roster: full | prueba")):
+    """Muestra las estrategias de un roster."""
+    if roster not in ROSTERS:
+        raise typer.BadParameter(f"opciones: {', '.join(ROSTERS)}")
+    members = ROSTERS[roster]()
+    typer.echo(f"Roster '{roster}': {len(members)} estrategias")
+    for name, strategy in members.items():
+        doc = (type(strategy).__doc__ or "").strip().splitlines()[0]
+        typer.echo(f"  {name:<24} {doc}")
+
 
 @app.command()
-def registry():
-    return Registry()
+def tournament(
+    roster: str = typer.Option("full", help="Roster: full (30) | prueba (25)"),
+    n_leagues: int = typer.Option(5, help="Número de ligas"),
+    n_per_league: int = typer.Option(6, help="Estrategias por liga"),
+    rounds: int = typer.Option(100, help="Rondas por partido"),
+    n_seasons: int = typer.Option(20, help="Temporadas (sin contar la clasificatoria)"),
+    k: int = typer.Option(2, help="Cuántas estrategias suben y bajan por liga"),
+    seed: int = typer.Option(42, help="Semilla maestra"),
+    qualifying: bool = typer.Option(True, help="Jugar temporada 0 clasificatoria"),
+    out_dir: Path = typer.Option(Path("results/runs"), help="Carpeta donde guardar"),
+    name: str = typer.Option(None, help="Nombre de la carpeta del run (por defecto, fecha y hora)"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Mostrar ascensos y descensos"),
+):
+    """Juega un torneo y guarda sus resultados (config.json + CSV)."""
+    config = TournamentConfig(roster=roster, n_leagues=n_leagues, n_per_league=n_per_league,
+                              rounds=rounds, n_seasons=n_seasons, n_ascend_descend=k,
+                              seed=seed, qualifying=qualifying)
+    try:
+        result = run_tournament(config, verbose=verbose)
+    except ValueError as e:
+        raise typer.BadParameter(str(e))
+    run_dir = save_run(result, out_dir=out_dir, name=name)
+    typer.echo(f"Resultados guardados en: {run_dir}")
+
 
 @app.command()
-def run(n_matches: int = 200,
-        rounds: int = 50,
-        seed: int = 0,
-        noise: float = 0.0,
-        out_dir: str = "results"):
-    csv_path = run_tournament(n_matches=n_matches, rounds=rounds, seed=seed, noise=noise, out_dir=out_dir)
-    typer.echo(f"✅ Resultados guardados en: {csv_path}")
+def stats(run_dir: Path = typer.Argument(..., help="Carpeta de un run")):
+    """Resumen por estrategia y clasificación de la última temporada."""
+    result = load_run(run_dir)
+
+    typer.echo("Resumen de todos los partidos (incluida la clasificatoria):")
+    typer.echo(summarize(result.matches).round(1).to_string(index=False))
+
+    st = result.standings
+    final = st[st["season"] == st["season"].max()]
+    typer.echo(f"\nClasificación de la temporada {st['season'].max()}:")
+    typer.echo(final[["league", "position", "name", "points"]].to_string(index=False))
+
 
 @app.command()
-def stats(csv_path: str):
-    table = summarize(csv_path)
-    typer.echo(table.to_string(index=False))
+def plot(run_dir: Path = typer.Argument(..., help="Carpeta de un run")):
+    """Genera las gráficas del run en <run_dir>/figs/."""
+    from .plots import plot_all  # import diferido: matplotlib solo cuando hace falta
+
+    for path in plot_all(load_run(run_dir), Path(run_dir) / "figs"):
+        typer.echo(f"  {path}")
+
 
 if __name__ == "__main__":
     app()
-

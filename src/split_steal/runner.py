@@ -1,0 +1,124 @@
+"""
+Ejecutar un torneo y guardar / cargar sus resultados.
+
+Separa la *configuración* (qué torneo jugar) del *motor* (`simulator.py`) y de
+la *persistencia* (archivos en disco):
+
+    TournamentConfig --run_tournament()--> TournamentResult --save_run()--> carpeta
+                                                            <--load_run()--
+
+Cada ejecución se guarda en una carpeta `results/runs/<nombre>/` con:
+  - config.json         parámetros + semilla + lista de estrategias (para poder repetirlo)
+  - matches.csv         un partido por fila: season, league, A, B, pa, pb, seed
+  - standings.csv       clasificación por temporada y liga: season, league, position, name, points
+  - strategy_stats.csv  cómo jugó cada estrategia en cada liga (cuántos SPLIT/STEAL y sus puntos)
+
+Convención: la temporada 0 es la clasificatoria (liga 0, con todas las estrategias).
+"""
+
+import json
+from dataclasses import asdict, dataclass, field
+from datetime import datetime
+from pathlib import Path
+from typing import List, Optional, Union
+
+import pandas as pd
+
+from .register import ROSTERS
+from .simulator import League_Tournament
+
+
+@dataclass
+class TournamentConfig:
+    """Todos los parámetros que definen un torneo. Mismo config  =>  mismo resultado."""
+
+    roster: str = "full"          # clave de register.ROSTERS: "full" (30) o "prueba" (25)
+    n_leagues: int = 5
+    n_per_league: int = 6
+    rounds: int = 100             # rondas por partido
+    n_seasons: int = 20           # temporadas tras la clasificatoria
+    n_ascend_descend: int = 2     # k: cuántos suben y bajan por liga
+    seed: int = 42                # semilla maestra
+    qualifying: bool = True       # jugar la temporada 0 clasificatoria
+
+
+@dataclass
+class TournamentResult:
+    """Resultados de un torneo en forma de tablas de pandas."""
+
+    config: TournamentConfig
+    matches: pd.DataFrame
+    standings: pd.DataFrame
+    strategy_stats: pd.DataFrame
+    strategies: List[str] = field(default_factory=list)
+
+
+def run_tournament(config: TournamentConfig, verbose: bool = False) -> TournamentResult:
+    """Construye el roster, juega el torneo y devuelve sus tablas de resultados."""
+    if config.roster not in ROSTERS:
+        raise ValueError(f"Roster desconocido '{config.roster}'. Opciones: {', '.join(ROSTERS)}")
+    members = ROSTERS[config.roster]()   # instancias nuevas en cada torneo
+
+    tournament = League_Tournament(
+        n_seasons=config.n_seasons,
+        n_leagues=config.n_leagues,
+        members=members,
+        rounds=config.rounds,
+        n_per_league=config.n_per_league,
+        n_ascend_descend=config.n_ascend_descend,
+        verbose=verbose,
+    )
+    tournament.run(seed=config.seed, qualifying=config.qualifying)
+
+    # Las estrategias guardan sus estadísticas por liga en `season_info`.
+    stats_rows = [
+        {"name": s.name, **asdict(ls)}
+        for s in members.values()
+        for ls in s.season_info
+    ]
+    strategy_stats = (pd.DataFrame(stats_rows)
+                      .sort_values(["season", "league", "name"], ignore_index=True))
+
+    return TournamentResult(
+        config=config,
+        matches=pd.DataFrame(tournament.matches),
+        standings=pd.DataFrame(tournament.standings),
+        strategy_stats=strategy_stats,
+        strategies=list(members),
+    )
+
+
+def save_run(result: TournamentResult, out_dir: Union[str, Path] = "results/runs",
+             name: Optional[str] = None) -> Path:
+    """
+    Guarda los resultados en `out_dir/name/` y devuelve esa ruta.
+
+    Sin `name` se usa una marca de tiempo. Con un nombre fijo, volver a ejecutar
+    el mismo config sobrescribe los archivos con contenido idéntico (útil para
+    comprobar la reproducibilidad con `git diff`).
+    """
+    name = name or datetime.now().strftime("tournament_%Y%m%d_%H%M%S")
+    run_dir = Path(out_dir) / name
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    meta = {"config": asdict(result.config), "strategies": result.strategies}
+    (run_dir / "config.json").write_text(
+        json.dumps(meta, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+    # lineterminator fijo: así los CSV son idénticos en Windows y Linux.
+    for table in ("matches", "standings", "strategy_stats"):
+        getattr(result, table).to_csv(run_dir / f"{table}.csv", index=False, lineterminator="\n")
+    return run_dir
+
+
+def load_run(run_dir: Union[str, Path]) -> TournamentResult:
+    """Carga una carpeta creada por `save_run`."""
+    run_dir = Path(run_dir)
+    meta = json.loads((run_dir / "config.json").read_text(encoding="utf-8"))
+    return TournamentResult(
+        config=TournamentConfig(**meta["config"]),
+        matches=pd.read_csv(run_dir / "matches.csv"),
+        standings=pd.read_csv(run_dir / "standings.csv"),
+        strategy_stats=pd.read_csv(run_dir / "strategy_stats.csv"),
+        strategies=meta["strategies"],
+    )
