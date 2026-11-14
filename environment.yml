@@ -6,7 +6,11 @@ dependencies:
   - numpy
   - pandas
   - matplotlib
-  - tqdm
   - typer
   - jupyterlab
   - ipykernel
+  - pytest
+  - pip
+  - pip:
+      # Instala este mismo repo en modo editable (equivale a `pip install -e .`)
+      - -e .

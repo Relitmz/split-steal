@@ -1,0 +1,28 @@
+# Configuración del paquete (estándar PEP 621).
+# Con `pip install -e .` Python sabe que el paquete `split_steal` vive en src/,
+# así que `import split_steal` funciona desde cualquier carpeta (scripts, tests, notebooks)
+# y además se crea el comando de terminal `split-steal`.
+
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "split-steal"
+version = "0.1.0"
+description = "Torneos de estrategias para el dilema Split/Steal iterado, con ligas, ascensos y descensos"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["numpy", "pandas", "matplotlib", "typer"]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+split-steal = "split_steal.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

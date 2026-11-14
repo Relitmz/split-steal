@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from register import Registry, PruebaRegistry
+from .register import Registry, PruebaRegistry
 
 SPLIT, STEAL = 0, 1
 

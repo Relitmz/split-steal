@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List
-from strategies import *
+from .strategies import *
 
 
 strategy_strategies = [
