@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.vscode/
+results/runs/
+.ipynb_checkpoints/
+CLAUDE.local.md

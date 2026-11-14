@@ -1,0 +1,12 @@
+name: splitsteal
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - numpy
+  - pandas
+  - matplotlib
+  - tqdm
+  - typer
+  - jupyterlab
+  - ipykernel
