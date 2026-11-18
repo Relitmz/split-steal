@@ -14,6 +14,9 @@ De un experimento (`plot_experiment`, en <experimento>/figs/):
 - variants_<métrica>.png  — puntos: una fila por estrategia, un punto por variante.
 - head_to_head__<variante>.png — el heatmap de cada variante con todas sus semillas.
 
+De una evolución (`plot_evolution`): evolution.png, áreas apiladas con la cuota de cada
+estrategia generación a generación.
+
 Decisiones de estilo: azul como tono único cuando el color no distingue series; escala
 divergente rojo-gris-azul (centrada en 0) para el heatmap, porque el signo importa;
 paleta categórica en orden fijo y como mucho 8 series por gráfica (más no se distinguen).
@@ -452,3 +455,44 @@ def plot_all(result: TournamentResult, out_dir) -> List[Path]:
     if result.config.format != "leagues":
         figures.pop("leagues_by_season.png")   # sin ligas no hay nada que dibujar
     return [_save(make(result), out_dir / filename) for filename, make in figures.items()]
+
+
+# =============================================================================
+# Evolución
+# =============================================================================
+
+OTHERS_COLOR = "#c3c2b7"
+
+
+def plot_evolution(shares: pd.DataFrame, top: int = 7, title: str = "", subtitle: str = ""):
+    """
+    Áreas apiladas: cuota de cada estrategia en la población, generación a generación.
+    Las `top` con más cuota final (como mucho 7) llevan color; el resto se agrupa en gris
+    como "Otras" (más de 8 colores no se distinguen).
+    """
+    top = min(top, MAX_SERIES - 1)
+    final = shares.iloc[-1].sort_values(ascending=False)
+    # Si alguna se extingue pero fue grande, también interesa verla: se ordena por el
+    # máximo alcanzado en toda la simulación.
+    peak = shares.max().sort_values(ascending=False)
+    main = list(dict.fromkeys(list(final[final > 0].index[:top]) + list(peak.index)))[:top]
+    others = shares.drop(columns=main).sum(axis=1)
+
+    fig, ax = plt.subplots(figsize=(9.5, 5))
+    layers = [shares[n] for n in main] + ([others] if others.max() > 0 else [])
+    colors = SERIES[:len(main)] + ([OTHERS_COLOR] if others.max() > 0 else [])
+    labels = main + (["Otras"] if others.max() > 0 else [])
+    ax.stackplot(shares.index, layers, colors=colors, labels=labels,
+                 edgecolor=SURFACE, linewidth=0.6)
+    ax.set_xlim(shares.index.min(), shares.index.max())
+    ax.set_ylim(0, 1)
+    _percent_axis(ax.yaxis)
+    ax.set_xlabel("Generación")
+    ax.set_ylabel("Cuota de la población")
+    ax.legend(loc="upper left", bbox_to_anchor=(1.01, 1), frameon=False, fontsize=8,
+              reverse=True)
+    ax.set_title(title or "Evolución de la población", pad=22)
+    if subtitle:
+        _subtitle(ax, subtitle)
+    fig.tight_layout()
+    return fig

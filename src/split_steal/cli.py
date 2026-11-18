@@ -290,5 +290,55 @@ def plot(
         typer.echo(f"  {path}")
 
 
+def _parse_shares(text: str) -> dict:
+    """'AlwaysSteal=0.98, TitForTat=0.02' -> {'AlwaysSteal': 0.98, 'TitForTat': 0.02}."""
+    shares = {}
+    for part in filter(None, (p.strip() for p in text.split(","))):
+        key, sep, value = part.rpartition("=")
+        if not sep or not key.strip():
+            raise typer.BadParameter(f"cuota mal escrita '{part}': usa Nombre=peso")
+        try:
+            shares[key.strip()] = float(value)
+        except ValueError:
+            raise typer.BadParameter(f"el peso de {key.strip()} debe ser un número ('{value}')")
+    return shares
+
+
+@app.command()
+def evolve(
+    roster: str = typer.Option("full", help=ROSTER_HELP),
+    initial: str = typer.Option(None, help='Cuotas iniciales, p. ej. "AlwaysSteal=0.98,TitForTat=0.02" '
+                                           "(las no citadas empiezan en 0; sin esto, todas iguales)"),
+    generations: int = typer.Option(500, help="Generaciones"),
+    rounds: int = typer.Option(100, help="Rondas por partido"),
+    noise: float = typer.Option(0.0, help="Probabilidad de que una jugada se invierta"),
+    payoff: str = typer.Option("R=3,S=0,T=5,P=1", help="Pagos"),
+    n_seeds: int = typer.Option(20, help="Partidos por pareja para calcular los puntos medios"),
+    seed: int = typer.Option(42, help="Semilla"),
+    workers: int = typer.Option(None, help="Procesos en paralelo (por defecto, todos los núcleos)"),
+    out_dir: Path = typer.Option(Path("results/evolution"), help="Carpeta donde guardar"),
+    name: str = typer.Option(None, help="Nombre de la carpeta (por defecto, fecha y hora)"),
+):
+    """Simulación evolutiva: las estrategias que más puntúan se multiplican generación a generación."""
+    from .evolution import EvolutionConfig, run_evolution, save_evolution
+    from .plots import _save, plot_evolution
+
+    config = EvolutionConfig(roster=roster, rounds=rounds, noise=noise, payoff=_parse_payoff(payoff),
+                             n_seeds=n_seeds, seed=seed, generations=generations,
+                             initial=_parse_shares(initial) if initial else None)
+    name = name or datetime.now().strftime("evolution_%Y%m%d_%H%M%S")
+    try:
+        result = run_evolution(config, workers=workers)
+    except ValueError as e:
+        raise typer.BadParameter(str(e))
+    run_dir = save_evolution(result, out_dir, name)
+    (run_dir / "figs").mkdir(exist_ok=True)
+    _save(plot_evolution(result.shares, subtitle=f"{len(result.matrix)} estrategias · ruido {noise:g}"),
+          run_dir / "figs" / "evolution.png")
+    typer.echo(f"Supervivientes tras {generations} generaciones:")
+    typer.echo(result.final.round(4).to_string())
+    typer.echo(f"Resultados guardados en: {run_dir}")
+
+
 if __name__ == "__main__":
     app()
