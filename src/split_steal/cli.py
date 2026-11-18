@@ -16,6 +16,8 @@ Typer convierte los parámetros de cada función en opciones de terminal
 """
 
 import sys
+import time
+from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
@@ -29,6 +31,7 @@ for _stream in (sys.stdout, sys.stderr):
         _stream.reconfigure(errors="replace")
 
 from .register import CATALOG, PRESETS, build_roster
+from .multiseed import load_multi, run_seeds, save_multi
 from .runner import TournamentConfig, load_run, run_tournament, save_run
 from .simulator import Payoff
 
@@ -135,27 +138,51 @@ def tournament(
     payoff: str = typer.Option("R=3,S=0,T=5,P=1",
                                help="Pagos: R ambos SPLIT, S me traicionan, T traiciono, P ambos STEAL"),
     save_rounds: bool = typer.Option(False, help="Guardar también cada jugada (rounds.csv.gz)"),
+    seeds: int = typer.Option(1, help="Repetir el torneo con N semillas (seed, seed+1, ...) y resumir"),
+    workers: int = typer.Option(None, help="Procesos en paralelo con --seeds > 1 (por defecto, todos los núcleos)"),
     out_dir: Path = typer.Option(Path("results/runs"), help="Carpeta donde guardar"),
     name: str = typer.Option(None, help="Nombre de la carpeta del run (por defecto, fecha y hora)"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Mostrar ascensos y descensos"),
 ):
-    """Juega un torneo y guarda sus resultados (config.json + CSV)."""
+    """Juega un torneo (o el mismo con varias semillas) y guarda sus resultados."""
     config = TournamentConfig(roster=roster, format=format, n_leagues=n_leagues,
                               n_per_league=n_per_league,
                               rounds=rounds, n_seasons=n_seasons, n_ascend_descend=k,
                               seed=seed, qualifying=qualifying, noise=noise,
                               payoff=_parse_payoff(payoff), save_rounds=save_rounds)
+    name = name or datetime.now().strftime("tournament_%Y%m%d_%H%M%S")
     try:
-        result = run_tournament(config, verbose=verbose)
+        if seeds > 1:
+            start = time.perf_counter()
+            multi = run_seeds(config, n_seeds=seeds, workers=workers)
+            run_dir = save_multi(multi, out_dir=out_dir, name=name)
+            typer.echo(f"{seeds} torneos en {time.perf_counter() - start:.1f} s")
+            _echo_summary(multi.summary)
+        else:
+            run_dir = save_run(run_tournament(config, verbose=verbose), out_dir=out_dir, name=name)
     except ValueError as e:
         raise typer.BadParameter(str(e))
-    run_dir = save_run(result, out_dir=out_dir, name=name)
     typer.echo(f"Resultados guardados en: {run_dir}")
+
+
+def _echo_summary(summary: pd.DataFrame, top: int = 12) -> None:
+    """Imprime las columnas principales del resumen entre semillas."""
+    cols = ["name", "rank_mean", "rank_ci95", "rank_best", "rank_worst", "title_rate",
+            "league1_rate", "points_per_round", "coop_rate"]
+    typer.echo(summary[cols].head(top).round(2).to_string(index=False))
+    if len(summary) > top:
+        typer.echo(f"... ({len(summary) - top} más en summary.csv)")
 
 
 @app.command()
 def stats(run_dir: Path = typer.Argument(..., help="Carpeta de un run")):
-    """Resumen por estrategia y clasificación final."""
+    """Resumen por estrategia y clasificación final (o resumen entre semillas)."""
+    if (Path(run_dir) / "summary.csv").exists():          # carpeta de varias semillas
+        multi = load_multi(run_dir)
+        typer.echo(f"{len(multi.seeds)} semillas ({multi.seeds[0]}..{multi.seeds[-1]}), "
+                   f"formato {multi.config.format}:")
+        _echo_summary(multi.summary, top=len(multi.summary))
+        return
     result = load_run(run_dir)
 
     typer.echo("Resumen de todos los partidos (incluida la clasificatoria):")

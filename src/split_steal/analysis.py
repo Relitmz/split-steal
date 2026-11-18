@@ -124,3 +124,52 @@ def final_ranking(standings: pd.DataFrame) -> pd.DataFrame:
     ranked = last.sort_values(["league", "position"], ignore_index=True)
     ranked.insert(0, "rank", range(1, len(ranked) + 1))
     return ranked[["rank", "name", "league", "position", "points"]]
+
+
+def summarize_seeds(final_rankings: pd.DataFrame, standings: pd.DataFrame,
+                    strategy_stats: pd.DataFrame) -> pd.DataFrame:
+    """
+    Resumen por estrategia de un torneo repetido con varias semillas (tablas con columna `seed`).
+
+    Posición final (1 = campeón):
+      rank_mean, rank_std, rank_ci95 (margen del intervalo de confianza del 95 % de
+      la media: rank_mean ± rank_ci95), rank_median, rank_best, rank_worst.
+    Frecuencias (0-1):
+      title_rate (fue campeona), podium_rate (top 3),
+      league1_rate (% de temporadas jugadas en la Liga 1; NaN en todos contra todos).
+    Juego (sumando todas las semillas y temporadas):
+      points_per_round, coop_rate, win_rate, retaliation_rate, peace_rate.
+
+    Ordenado por rank_mean (mejor primero).
+    """
+    g = final_rankings.groupby("name")["rank"]
+    n = g.size()
+    summary = pd.DataFrame({
+        "n_seeds": n,
+        "rank_mean": g.mean(),
+        "rank_std": g.std(ddof=1).fillna(0.0),
+    })
+    summary["rank_ci95"] = 1.96 * summary["rank_std"] / np.sqrt(n)
+    summary["rank_median"] = g.median()
+    summary["rank_best"] = g.min()
+    summary["rank_worst"] = g.max()
+    summary["title_rate"] = final_rankings.assign(x=final_rankings["rank"] == 1).groupby("name")["x"].mean()
+    summary["podium_rate"] = final_rankings.assign(x=final_rankings["rank"] <= 3).groupby("name")["x"].mean()
+
+    seasons = standings[standings["season"] > 0]
+    if len(seasons):
+        summary["league1_rate"] = seasons.assign(x=seasons["league"] == 1).groupby("name")["x"].mean()
+    else:
+        summary["league1_rate"] = np.nan
+
+    t = strategy_stats.groupby("name")[["points", "rounds_played", "times_split", "wins",
+                                        "matches_played", "retaliated", "provoked",
+                                        "peace_offers", "after_mutual_steal"]].sum()
+    summary["points_per_round"] = t["points"] / t["rounds_played"]
+    summary["coop_rate"] = t["times_split"] / t["rounds_played"]
+    summary["win_rate"] = t["wins"] / t["matches_played"]
+    summary["retaliation_rate"] = _rate(t["retaliated"], t["provoked"])
+    summary["peace_rate"] = _rate(t["peace_offers"], t["after_mutual_steal"])
+
+    summary = summary.reset_index().sort_values(["rank_mean", "name"], ignore_index=True)
+    return summary
