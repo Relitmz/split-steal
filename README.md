@@ -9,6 +9,9 @@ torneos configurables: ligas con ascensos y descensos o todos contra todos, con 
 > traicionar o algo intermedio? ¿Y cambia la respuesta si hay errores, si traicionar
 > tienta más o si cambia el formato de la competición?
 
+📄 **[Informe completo (Word)](docs/informe/Informe_SplitSteal.docx)**: el proyecto explicado de forma
+sencilla, con todos los resultados, gráficas y lo que dicen sobre la vida real.
+
 ![Quién gana a quién](results/canonical/figs/head_to_head.png)
 
 ## El juego
@@ -42,6 +45,9 @@ son configurables.
 - **Experimentos**: un archivo `.toml` describe qué variar (`[sweep]`) o qué comparar
   (`[[variants]]`); el programa juega todas las variantes × semillas y deja una tabla lista
   para comparar.
+- **Evolución**: las estrategias que más puntúan se multiplican generación a generación
+  (dinámica del replicador). ¿Sobreviven las traicioneras? ¿Puede un 2 % de cooperadoras
+  conquistar un mundo de egoístas?
 
 ## Resultados destacados
 
@@ -79,6 +85,10 @@ ingenuas de las ligas bajas y bajan al chocar con las vengativas.
 traición, más caro sale tardar en responderla. Lo que es una virtud con errores (tolerar) es
 un defecto con mucha tentación.
 
+**6. La cooperación conquista un mundo egoísta.** En una población que empieza con 98 %
+de `AlwaysSteal` y 2 % de `TitForTat`, en 40 generaciones `TitForTat` lo es casi todo; basta con
+superar una masa crítica del 0,5 %. Partiendo de las 36 a partes iguales, solo sobreviven amables.
+
 ## Instalación
 
 Con [conda/miniforge](https://github.com/conda-forge/miniforge):
@@ -103,6 +113,7 @@ split-steal tournament --seeds 50 --noise 0.05 --name s50  # el mismo con 50 sem
 split-steal experiment experiments/ruido.toml              # un experimento completo
 split-steal compare results/experiments/ruido --top 15     # tabla estrategia × variante
 split-steal plot results/experiments/ruido                 # gráficas en .../figs/
+split-steal evolve --initial "AlwaysSteal=0.98,TitForTat=0.02"   # simulación evolutiva
 ```
 
 (`python -m split_steal ...` funciona igual.) La **[guía de usuario](docs/GUIA_USUARIO.md)**
@@ -132,11 +143,13 @@ src/split_steal/
   runner.py       TournamentConfig -> run_tournament -> save_run / load_run
   multiseed.py    el mismo torneo con N semillas, en paralelo (procesos)
   experiment.py   experimentos .toml: variantes, barridos, catálogo y comparación
+  evolution.py    evolución: matriz de pagos entre estrategias + dinámica del replicador
   plots.py        gráficas (matplotlib)
   cli.py          comandos de terminal (Typer)
 experiments/      experimentos de ejemplo (.toml)
 results/          canonical/ (versionado), experiments/ (resúmenes versionados), runs/ (local)
-notebooks/        presentación de resultados (se ejecutan a mano)
+notebooks/        presentación de resultados (se ejecutan a mano); 03_informe genera el informe
+docs/             guía de usuario e informe (Word + script que lo monta)
 tests/            pytest: reglas, estrategias, ligas, desempates, paralelo, experimentos
 ```
 
@@ -206,7 +219,7 @@ experiment.toml ─► variantes (TournamentConfig) × semillas ─► run_many 
 
 ## Limitaciones conocidas
 
-- **Sin evolución.** Las estrategias no se reproducen según su éxito (dinámica evolutiva).
+- **Evolución sin mutaciones ni espacio.** No aparecen estrategias nuevas y todas se cruzan con todas.
 - **Duración conocida y fija.** Los partidos duran siempre lo mismo; no se modela una
   probabilidad de que el partido termine en cada ronda.
 - **Solo ruido de ejecución.** No hay ruido de percepción (ver mal lo que hizo el rival).

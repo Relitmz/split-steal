@@ -17,6 +17,8 @@ dependencies = ["numpy", "pandas", "matplotlib", "typer"]
 
 [project.optional-dependencies]
 dev = ["pytest"]
+# Para regenerar el informe (notebooks/03_informe.ipynb y docs/informe/build_informe.py)
+report = ["jupyterlab", "python-docx"]
 
 [project.scripts]
 split-steal = "split_steal.cli:app"

@@ -10,6 +10,7 @@ dependencies:
   - jupyterlab
   - ipykernel
   - pytest
+  - python-docx          # informe en Word (docs/informe/build_informe.py)
   - pip
   - pip:
       # Instala este mismo repo en modo editable (equivale a `pip install -e .`)

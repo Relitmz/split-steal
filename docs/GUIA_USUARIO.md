@@ -18,6 +18,8 @@ son equivalentes.
 9. [Analizar los resultados](#9-analizar-los-resultados)
 10. [Recetas: pregunta → comando](#10-recetas-pregunta--comando)
 11. [Problemas frecuentes](#11-problemas-frecuentes)
+12. [Evolución](#12-evolución)
+13. [El informe](#13-el-informe)
 
 ---
 
@@ -83,6 +85,8 @@ provocación), `vengativa`, `rencorosa` (castigo permanente), `perdona`, `aleato
 | `cooperativas` | 12 | Solo amables |
 | `cooperativas_con_traidores` | 12 | 9 amables + AlwaysSteal, Joss, Prober |
 | `prueba` | 25 | Roster de pruebas, con la plantilla `UserStrategy` |
+| `amables` | 18 | Todas las del roster oficial con la etiqueta `amable` (se calcula solo) |
+| `traicioneras` | 15 | Todas las del roster oficial con la etiqueta `traicionera` (se calcula solo) |
 
 ## 4. Elegir quién juega
 
@@ -220,7 +224,8 @@ estrategia que no está, ligas que no suman), falla con un mensaje claro. Todas 
 usan las mismas semillas, así que sus diferencias no se deben a "otra suerte".
 
 **Experimentos de ejemplo:** `ruido` (ruido creciente), `perdon_optimo` (cuánto perdonar),
-`formatos` (ligas frente a todos contra todos) y `tentacion` (pago T).
+`formatos` (ligas frente a todos contra todos), `tentacion` (pago T) y `entornos` (las mismas
+estrategias en un mundo amable, mixto y hostil).
 
 ## 8. Dónde quedan los resultados y qué contienen
 
@@ -344,3 +349,49 @@ un torneo paso a paso y `02_experimentos` presenta los experimentos. Se ejecutan
   demasiado); usa `--save-rounds` en torneos sueltos.
 - **Mi estrategia da resultados distintos cada vez**: usa siempre `rng` para el azar (nunca
   `random`) y borra su estado en `reset()`.
+
+## 12. Evolución
+
+En vez de 36 jugadoras, una población enorme: cada generación, las estrategias que más
+puntúan contra la población actual se multiplican y las que menos se reducen (dinámica del
+replicador, sin mutaciones). Responde a preguntas como «¿sobreviven las traicioneras?» o
+«¿puede un grupo pequeño de cooperadoras conquistar un mundo de egoístas?».
+
+```bash
+split-steal evolve --name todas                                     # las 36 a partes iguales
+split-steal evolve --noise 0.05 --name todas_ruido
+split-steal evolve --roster "AlwaysSteal, TitForTat" --initial "AlwaysSteal=0.98,TitForTat=0.02" --name invasion
+```
+
+| Opción | Por defecto | Qué hace |
+|---|---|---|
+| `--roster` | `full` | Estrategias presentes (sección 4) |
+| `--initial` | todas iguales | Cuotas iniciales `Nombre=peso,...`; las no citadas empiezan en 0 |
+| `--generations` | 500 | Generaciones |
+| `--n-seeds` | 20 | Partidos por pareja para calcular los puntos medios |
+| `--rounds`, `--noise`, `--payoff`, `--seed` | como en `tournament` | Reglas de los partidos |
+
+Resultados en `results/evolution/<nombre>/` (solo en tu equipo): `matrix.csv` (puntos por
+ronda de cada estrategia contra cada otra, incluida contra sí misma), `shares.csv` (una fila
+por generación, una columna por estrategia: su cuota de la población) y `figs/evolution.png`.
+
+Desde Python, para probar muchos escenarios con la misma matriz (es muy rápido):
+
+```python
+from split_steal.evolution import EvolutionConfig, payoff_matrix, evolve
+M = payoff_matrix(EvolutionConfig(noise=0.05))
+shares = evolve(M, initial={"AlwaysSteal": 0.9, "Gradual": 0.1}, generations=300)
+```
+
+## 13. El informe
+
+`docs/informe/Informe_SplitSteal.docx` explica el proyecto y sus resultados en lenguaje
+sencillo. Se genera en dos pasos, para que texto y datos no se contradigan nunca:
+
+```bash
+cd notebooks && jupyter nbconvert --to notebook --execute --inplace 03_informe.ipynb   # gráficas + cifras
+cd .. && python docs/informe/build_informe.py                                          # monta el Word
+```
+
+El primero escribe `docs/informe/figs/*.png` y `docs/informe/cifras.json`; el segundo lee
+ambos (necesita `python-docx`). Al abrir el Word, actualiza el índice si Word lo pide.
