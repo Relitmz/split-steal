@@ -1,0 +1,18 @@
+# ¿Qué pasa si traicionar tienta más (o menos)?
+# Se cambia T (puntos por robar a quien coopera) con R=3, S=0, P=1 fijos.
+# Ojo: con T >= 6 deja de cumplirse 2R > T + S. Entonces turnarse (yo te robo, luego tú
+# a mí: (T + S) / 2 puntos por ronda) rinde tanto o más que cooperar siempre (R = 3):
+# el juego deja de ser un dilema del prisionero "clásico".
+# Comparar:  split-steal compare results/experiments/tentacion --top 15
+
+name = "tentacion"
+description = "Barrido del pago de la tentación T (por defecto 5)"
+seeds = 50
+
+[base]
+format = "leagues"
+roster = "full"
+noise = 0.0
+
+[sweep]
+"payoff.T" = [4, 5, 6, 8]

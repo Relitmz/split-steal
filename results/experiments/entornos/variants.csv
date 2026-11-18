@@ -1,0 +1,7 @@
+variant,n_seeds,roster,n_strategies,format,n_leagues,n_per_league,rounds,n_seasons,n_ascend_descend,seed,qualifying,noise,save_rounds,payoff_R,payoff_S,payoff_T,payoff_P
+amable__noise=0,50,"amables, AlwaysSteal",19,round_robin,6,6,100,20,2,42,True,0.0,False,3,0,5,1
+amable__noise=0.05,50,"amables, AlwaysSteal",19,round_robin,6,6,100,20,2,42,True,0.05,False,3,0,5,1
+mixto__noise=0,50,full,36,round_robin,6,6,100,20,2,42,True,0.0,False,3,0,5,1
+mixto__noise=0.05,50,full,36,round_robin,6,6,100,20,2,42,True,0.05,False,3,0,5,1
+hostil__noise=0,50,"traicioneras, TitForTat, GenerousTitForTat, Gradual, MimicMajority, GrimTrigger, WinStayLoseShift, AlwaysSplit",22,round_robin,6,6,100,20,2,42,True,0.0,False,3,0,5,1
+hostil__noise=0.05,50,"traicioneras, TitForTat, GenerousTitForTat, Gradual, MimicMajority, GrimTrigger, WinStayLoseShift, AlwaysSplit",22,round_robin,6,6,100,20,2,42,True,0.05,False,3,0,5,1

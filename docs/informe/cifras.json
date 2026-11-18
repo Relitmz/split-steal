@@ -1,0 +1,308 @@
+{
+  "n_amables": 18,
+  "n_traicioneras": 15,
+  "top5_sin_ruido": [
+    "Gradual",
+    "ForgivingTitForTat",
+    "TitForTat",
+    "CopycatDelayed",
+    "SplitUntilBetrayedTwice"
+  ],
+  "top10_amables": 10,
+  "bottom10_traicioneras": 5,
+  "rank_medio_grupo": {
+    "Amable": 14.3,
+    "Otra": 21.8,
+    "Traicionera": 22.9
+  },
+  "alwayssteal_win_rate": 85,
+  "alwayssteal_rank": 18.5,
+  "tft_win_rate": 0,
+  "tft_rank": 6.2,
+  "alwayssteal_h2h": {
+    "gana": 31,
+    "empata": 4,
+    "pierde": 0
+  },
+  "cualidades": {
+    "Amables": [
+      14.3,
+      22.7
+    ],
+    "Responden": [
+      15.5,
+      23.2
+    ],
+    "Perdonan": [
+      16.3,
+      21.0
+    ],
+    "Sin azar": [
+      18.3,
+      19.0
+    ]
+  },
+  "amables_vengativas": [
+    11.6,
+    27.8
+  ],
+  "amables_no_vengativas": [
+    "ConditionalRandom",
+    "RandomAfterLoss",
+    "AlwaysSplit"
+  ],
+  "rank_amables": 14.3,
+  "rank_no_amables": 22.7,
+  "alwayssplit_rank": 30.8,
+  "entornos": {
+    "AlwaysSplit|0.0|amable": 18.0,
+    "AlwaysSteal|0.0|amable": 19.0,
+    "GenerousTitForTat|0.0|amable": 14.0,
+    "Gradual|0.0|amable": 11.4,
+    "GrimTrigger|0.0|amable": 2.8,
+    "MimicMajority|0.0|amable": 3.1,
+    "TitForTat|0.0|amable": 3.2,
+    "WinStayLoseShift|0.0|amable": 15.4,
+    "AlwaysSplit|0.0|hostil": 17.4,
+    "AlwaysSteal|0.0|hostil": 10.0,
+    "GenerousTitForTat|0.0|hostil": 5.9,
+    "Gradual|0.0|hostil": 1.8,
+    "GrimTrigger|0.0|hostil": 5.0,
+    "MimicMajority|0.0|hostil": 7.8,
+    "TitForTat|0.0|hostil": 6.0,
+    "WinStayLoseShift|0.0|hostil": 9.0,
+    "AlwaysSplit|0.0|mixto": 21.3,
+    "AlwaysSteal|0.0|mixto": 32.4,
+    "GenerousTitForTat|0.0|mixto": 9.1,
+    "Gradual|0.0|mixto": 1.0,
+    "GrimTrigger|0.0|mixto": 6.5,
+    "MimicMajority|0.0|mixto": 10.6,
+    "TitForTat|0.0|mixto": 8.1,
+    "WinStayLoseShift|0.0|mixto": 15.4,
+    "AlwaysSplit|0.05|amable": 6.0,
+    "AlwaysSteal|0.05|amable": 18.7,
+    "GenerousTitForTat|0.05|amable": 7.1,
+    "Gradual|0.05|amable": 12.0,
+    "GrimTrigger|0.05|amable": 14.6,
+    "MimicMajority|0.05|amable": 1.7,
+    "TitForTat|0.05|amable": 9.5,
+    "WinStayLoseShift|0.05|amable": 15.3,
+    "AlwaysSplit|0.05|hostil": 20.9,
+    "AlwaysSteal|0.05|hostil": 5.8,
+    "GenerousTitForTat|0.05|hostil": 11.3,
+    "Gradual|0.05|hostil": 3.0,
+    "GrimTrigger|0.05|hostil": 4.6,
+    "MimicMajority|0.05|hostil": 10.9,
+    "TitForTat|0.05|hostil": 8.1,
+    "WinStayLoseShift|0.05|hostil": 16.6,
+    "AlwaysSplit|0.05|mixto": 27.1,
+    "AlwaysSteal|0.05|mixto": 27.5,
+    "GenerousTitForTat|0.05|mixto": 12.8,
+    "Gradual|0.05|mixto": 5.7,
+    "GrimTrigger|0.05|mixto": 10.9,
+    "MimicMajority|0.05|mixto": 6.3,
+    "TitForTat|0.05|mixto": 11.8,
+    "WinStayLoseShift|0.05|mixto": 25.4
+  },
+  "entornos_n": {
+    "amable": 19,
+    "hostil": 22,
+    "mixto": 36
+  },
+  "parejas": {
+    "TitForTat|0.0": 100,
+    "TitForTat|0.01": 52,
+    "TitForTat|0.05": 30,
+    "WinStayLoseShift|0.0": 100,
+    "WinStayLoseShift|0.01": 96,
+    "WinStayLoseShift|0.05": 82,
+    "GenerousTitForTat|0.0": 100,
+    "GenerousTitForTat|0.01": 94,
+    "GenerousTitForTat|0.05": 77,
+    "MimicMajority|0.0": 100,
+    "MimicMajority|0.01": 98,
+    "MimicMajority|0.05": 89,
+    "GrimTrigger|0.0": 100,
+    "GrimTrigger|0.01": 42,
+    "GrimTrigger|0.05": 9
+  },
+  "coop_media_por_ruido": {
+    "0.0": 64,
+    "0.01": 57,
+    "0.05": 50,
+    "0.1": 48
+  },
+  "ruido_rank": {
+    "Gradual|0.0": 5.4,
+    "ForgivingTitForTat|0.0": 5.9,
+    "TitForTat|0.0": 6.2,
+    "GrimTrigger|0.0": 10.7,
+    "MimicMajority|0.0": 10.9,
+    "GenerousTitForTat|0.0": 16.1,
+    "AlwaysSteal|0.0": 18.5,
+    "MimicMajority|0.01": 4.9,
+    "ForgivingTitForTat|0.01": 5.7,
+    "TitForTat|0.01": 6.0,
+    "Gradual|0.01": 8.0,
+    "GenerousTitForTat|0.01": 10.7,
+    "GrimTrigger|0.01": 13.6,
+    "AlwaysSteal|0.01": 18.2,
+    "MimicMajority|0.05": 4.0,
+    "TitForTat|0.05": 6.6,
+    "ForgivingTitForTat|0.05": 7.5,
+    "Gradual|0.05": 8.8,
+    "GrimTrigger|0.05": 13.6,
+    "AlwaysSteal|0.05": 15.6,
+    "GenerousTitForTat|0.05": 24.6,
+    "MimicMajority|0.1": 4.6,
+    "Gradual|0.1": 7.1,
+    "GrimTrigger|0.1": 9.0,
+    "AlwaysSteal|0.1": 10.6,
+    "TitForTat|0.1": 13.3,
+    "ForgivingTitForTat|0.1": 18.6,
+    "GenerousTitForTat|0.1": 27.4
+  },
+  "mimic_titulos_ruido5": 38,
+  "perdon": {
+    "0.0|0.0": 3.9,
+    "0.0|0.05": 4.6,
+    "0.1|0.0": 3.3,
+    "0.1|0.05": 4.4,
+    "0.2|0.0": 3.7,
+    "0.2|0.05": 4.6,
+    "0.333333|0.0": 4.5,
+    "0.333333|0.05": 5.2,
+    "0.5|0.0": 5.4,
+    "0.5|0.05": 6.5,
+    "0.7|0.0": 6.5,
+    "0.7|0.05": 8.1,
+    "1.0|0.0": 9.5,
+    "1.0|0.05": 11.2
+  },
+  "perdon_mejor_p": {
+    "0.0": 0.1,
+    "0.05": 0.1
+  },
+  "alwayssteal_segun_perdon_ruido5": {
+    "0.0": 11.8,
+    "0.1": 11.7,
+    "0.2": 11.6,
+    "0.333333": 11.4,
+    "0.5": 10.8,
+    "0.7": 10.3,
+    "1.0": 8.9
+  },
+  "memoria": {
+    "MimicMajority|misma": 2.93,
+    "MimicMajority|AlwaysSteal": 1.14,
+    "TitForTat|misma": 2.33,
+    "TitForTat|AlwaysSteal": 1.1,
+    "WinStayLoseShift|misma": 2.77,
+    "WinStayLoseShift|AlwaysSteal": 0.68,
+    "HardMajority|misma": 1.17,
+    "HardMajority|AlwaysSteal": 1.15
+  },
+  "formatos_max_titulos": {
+    "ligas__noise=0": [
+      "TwoTitsForTat",
+      14
+    ],
+    "ligas__noise=0.05": [
+      "MimicMajority",
+      38
+    ],
+    "todos_contra_todos__noise=0": [
+      "Gradual",
+      96
+    ],
+    "todos_contra_todos__noise=0.05": [
+      "Adaptive",
+      62
+    ]
+  },
+  "formatos_campeones_distintos": {
+    "ligas__noise=0": 13,
+    "ligas__noise=0.05": 13,
+    "todos_contra_todos__noise=0": 2,
+    "todos_contra_todos__noise=0.05": 7
+  },
+  "trayectoria_alwayssteal": [
+    6,
+    5,
+    4,
+    4,
+    4,
+    3,
+    4,
+    3,
+    4,
+    4,
+    3,
+    3,
+    2,
+    3,
+    3,
+    2,
+    3,
+    3,
+    3,
+    4
+  ],
+  "sorteo_liga1": {
+    "0.0": 90,
+    "0.05": 0
+  },
+  "tentacion": {
+    "TitForTat|4": 6.7,
+    "MimicMajority|4": 8.5,
+    "AlwaysSteal|4": 20.4,
+    "TitForTat|5": 6.2,
+    "MimicMajority|5": 10.9,
+    "AlwaysSteal|5": 18.5,
+    "TitForTat|6": 4.7,
+    "MimicMajority|6": 15.5,
+    "AlwaysSteal|6": 16.8,
+    "TitForTat|8": 2.9,
+    "AlwaysSteal|8": 12.3,
+    "MimicMajority|8": 20.9
+  },
+  "evo_sin_ruido": {
+    "supervivientes": 18,
+    "amables": 100.0,
+    "top": {
+      "Gradual": 9.9,
+      "ForgivingTitForTat": 7.6,
+      "ProbTitForTat": 7.6,
+      "CopycatDelayed": 7.3,
+      "TitForTat": 7.2
+    }
+  },
+  "evo_ruido5": {
+    "supervivientes": 23,
+    "amables": 97.4,
+    "top": {
+      "ProbTitForTat": 58.2,
+      "ForgivingTitForTat": 14.8,
+      "GenerousTitForTat": 12.6,
+      "ConditionalRandom": 5.4,
+      "RandomAfterLoss": 5.0
+    }
+  },
+  "depredadora_adaptive": {
+    "inicio": 2.8,
+    "pico": 4.0,
+    "gen_pico": 5,
+    "final": 0.0,
+    "extinta_gen": 119
+  },
+  "depredadora_alternator": {
+    "inicio": 2.8,
+    "pico": 22.1,
+    "gen_pico": 79,
+    "final": 1.6,
+    "extinta_gen": null
+  },
+  "invasion_gen_50pct": 34,
+  "invasion_gen_99pct": 39,
+  "masa_critica_pct": 0.51
+}

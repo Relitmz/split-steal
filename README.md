@@ -1,13 +1,18 @@
-# Split/Steal: torneos de estrategias con ascensos y descensos
+# Split/Steal: un laboratorio de estrategias de cooperación
 
 Simulador en Python del juego **Split/Steal iterado** (una variante del *dilema del
-prisionero*). 30 estrategias escritas a mano compiten en un torneo con **ligas,
-ascensos y descensos**, como una liga de fútbol. La pregunta de fondo:
+prisionero*). **36 estrategias** (escritas a mano y clásicas de la literatura) compiten en
+torneos configurables: ligas con ascensos y descensos o todos contra todos, con errores
+(ruido), otros pagos, y repetidos con decenas de semillas para separar lo robusto de la suerte.
 
-> ¿Qué tipo de comportamiento sale ganando cuando se juega muchas veces seguidas:
-> cooperar, traicionar o algo intermedio?
+> ¿Qué comportamiento sale ganando cuando se juega muchas veces seguidas: cooperar,
+> traicionar o algo intermedio? ¿Y cambia la respuesta si hay errores, si traicionar
+> tienta más o si cambia el formato de la competición?
 
-![Liga de cada estrategia por temporada](results/canonical/canonical/figs/leagues_by_season.png)
+📄 **Informe completo: [PDF](docs/informe/Informe_SplitSteal.pdf) · [Word](docs/informe/Informe_SplitSteal.docx)**:
+el proyecto explicado de forma sencilla, con todos los resultados, gráficas y lo que dicen sobre la vida real.
+
+![Quién gana a quién](results/canonical/figs/head_to_head.png)
 
 ## El juego
 
@@ -15,53 +20,74 @@ En cada ronda dos jugadores eligen a la vez **SPLIT** (cooperar) o **STEAL** (tr
 
 |                 | Rival SPLIT | Rival STEAL |
 |-----------------|:-----------:|:-----------:|
-| **Yo SPLIT**    | 3 , 3       | 0 , 5       |
-| **Yo STEAL**    | 5 , 0       | 1 , 1       |
+| **Yo SPLIT**    | 3 , 3 (R)   | 0 , 5 (S)   |
+| **Yo STEAL**    | 5 , 0 (T)   | 1 , 1 (P)   |
 
-En una sola ronda siempre conviene traicionar: ganas 5 en vez de 3 si el otro coopera,
-y 1 en vez de 0 si traiciona. Pero si los dos razonan así acaban en 1-1, peor que el 3-3
-de cooperar. Cuando se juegan **100 rondas seguidas contra el mismo rival**, cada
-jugador puede castigar la traición del otro, y la cooperación puede salir rentable.
+En una sola ronda siempre conviene traicionar: ganas 5 en vez de 3 si el otro coopera, y
+1 en vez de 0 si traiciona. Pero si los dos razonan así acaban en 1-1, peor que el 3-3 de
+cooperar. Cuando se juegan **100 rondas seguidas contra el mismo rival**, cada jugador puede
+castigar la traición del otro, y la cooperación puede salir rentable. Los pagos (R, S, T, P)
+son configurables.
 
-## Cómo funciona el torneo
+## Qué se puede simular
 
-1. **Partido**: dos estrategias juegan 100 rondas. Cada una solo ve lo que ha pasado
-   antes en ese partido.
-2. **Liga**: todos contra todos a una vuelta. Los puntos de liga son la **suma de
-   puntos** de todos los partidos; no cuentan las victorias.
-3. **Temporada 0 (clasificatoria)**: una única liga con las 30 estrategias. Su
-   clasificación las reparte en 5 ligas de 6: las 6 mejores van a la Liga 1, las
-   siguientes a la Liga 2, etc.
-4. **Temporadas 1-20**: se juegan las 5 ligas. Al final de cada temporada, a la vez,
-   los **2 primeros** de cada liga suben y los **2 últimos** bajan.
+- **Estrategias**: 36 en el roster oficial, cada una con descripción y etiquetas (`amable`,
+  `traicionera`, `vengativa`, `perdona`...). Se eligen por nombre, por *preset* o
+  combinando: `"clasicas, -AlwaysSteal, +Extortioner, ForgivingTitForTat(p=0.2)"`.
+- **Formatos**:
+  - `leagues`: clasificatoria todos contra todos y luego ligas jerarquizadas (Liga 1 = la
+    mejor) durante varias temporadas; los 2 primeros de cada liga suben y los 2 últimos bajan.
+  - `round_robin`: una sola liga con todas, como en los torneos de Axelrod.
+- **Reglas**: rondas por partido, matriz de pagos, **ruido** (probabilidad de que una jugada
+  salga al revés: un error, un malentendido) y desempates (puntos → enfrentamiento directo →
+  diferencia de puntos → sorteo con la semilla).
+- **Repeticiones**: el mismo torneo con N semillas, **en paralelo** (50 torneos en ~10 s).
+- **Experimentos**: un archivo `.toml` describe qué variar (`[sweep]`) o qué comparar
+  (`[[variants]]`); el programa juega todas las variantes × semillas y deja una tabla lista
+  para comparar.
+- **Evolución**: las estrategias que más puntúan se multiplican generación a generación
+  (dinámica del replicador). ¿Sobreviven las traicioneras? ¿Puede un 2 % de cooperadoras
+  conquistar un mundo de egoístas?
 
-La diferencia con un torneo clásico (tipo Axelrod) es que, tras la clasificatoria, cada
-estrategia solo juega contra rivales **de su nivel**. Una estrategia que vive de
-explotar a las ingenuas puede funcionar en ligas bajas y hundirse al subir.
+## Resultados destacados
 
-## Resultados del run canónico
+Cada experimento repite cada condición con **50 semillas** (`experiments/*.toml`; detalle y
+gráficas en [`notebooks/02_experimentos.ipynb`](notebooks/02_experimentos.ipynb)).
 
-Configuración: 30 estrategias · 5 ligas × 6 · 100 rondas por partido · 20 temporadas ·
-suben/bajan 2 · semilla 42 (`results/canonical/canonical/`).
+**1. Ganar partidos no es ganar torneos.** Sin ruido, `AlwaysSteal` no pierde ningún
+enfrentamiento directo (31 victorias, 4 empates, 0 derrotas) y gana el 85 % de sus partidos,
+pero queda de media en el puesto 18 de 36. `TitForTat`, sin errores, no puede ganar ni un partido (como mucho
+empata) y siempre está arriba. En un juego que no es de suma cero cuenta cuánto sumas, no a
+cuántos ganas.
 
-| Clasificatoria | Cooperación vs. puntos |
-|---|---|
-| ![](results/canonical/canonical/figs/qualifying_points.png) | ![](results/canonical/canonical/figs/cooperation_vs_payoff.png) |
+**2. Con errores gana quien juzga por la trayectoria.** Con un 5 % de ruido, `MimicMajority`
+(juega lo que el rival ha hecho más veces) gana el 38 % de los torneos: un error aislado no
+cambia la mayoría, así que lo ignora, pero castiga a quien traiciona de forma persistente.
+`TitForTat`, que solo mira la última jugada, aguanta hasta el 5 % de ruido y se hunde al 10 %.
+Con más errores la cooperación media baja del 64 % al 48 % y `AlwaysSteal` sube del puesto
+18 al 11.
 
-Observaciones:
+![Ruido](results/experiments/ruido/figs/sweep_rank_mean.png)
 
-- **Ganan las cooperadoras que castigan.** `GrimTrigger`, `SplitUntilBetrayedTwice`,
-  `ForgiveAfter3` y la familia *Tit-for-Tat* encabezan la clasificatoria: cooperan
-  mucho, pero responden a la traición.
-- **Ni cooperar siempre ni traicionar siempre.** `AlwaysSplit` queda a media tabla
-  porque la explotan, y `AlwaysSteal`, abajo: nunca pierde un partido, pero casi
-  siempre acaba en el 1-1.
-- **Empezar traicionando sale caro.** `DoubleStealStart`, `GreedyStart` y
-  `FirstStealThenSplit` provocan represalias de las que no se recuperan.
-- **En la Liga 1 todas empatan.** Cuando las 6 cooperan siempre, todas suman 1500
-  puntos. El desempate (alfabético, ver limitaciones) decide quién baja. Por eso algunas
-  estrategias oscilan cada temporada entre Liga 1 y Liga 2 (`GrimTrigger`, `TitForTat`,
-  `MimicMajority`).
+**3. Perdonar, pero poco.** Barriendo la probabilidad de perdón de `ForgivingTitForTat`, lo
+mejor es perdonar un 10-20 % de las traiciones; a partir de 1/3 empeora claramente. El 1/3 de
+la teoría (Nowak y Sigmund) es el perdón *máximo* que una población puede permitirse, no el
+óptimo cuando hay traidores. Y cuanto más se perdona, mejor le va a `AlwaysSteal`.
+
+**4. El formato decide el campeón.** En todos contra todos sin ruido, `Gradual` gana el 96 %
+de los torneos. En ligas ninguna pasa del 14 % y 13 distintas ganan algún título: en la Liga 1 se juntan cooperadoras
+que empatan en todo (incluido el enfrentamiento directo) y **el 94 % de los descensos de la
+Liga 1 los decide el sorteo**. Las traicioneras hacen de "ascensor": suben explotando a las
+ingenuas de las ligas bajas y bajan al chocar con las vengativas.
+
+**5. No hay una estrategia mejor en abstracto.** Si robar da más puntos (T = 8 en vez de 5),
+`TitForTat` pasa a ser la mejor de media y `MimicMajority` se hunde: cuanto más vale una
+traición, más caro sale tardar en responderla. Lo que es una virtud con errores (tolerar) es
+un defecto con mucha tentación.
+
+**6. La cooperación conquista un mundo egoísta.** En una población que empieza con 98 %
+de `AlwaysSteal` y 2 % de `TitForTat`, en 40 generaciones `TitForTat` lo es casi todo; basta con
+superar una masa crítica del 0,5 %. Partiendo de las 36 a partes iguales, solo sobreviven amables.
 
 ## Instalación
 
@@ -78,62 +104,69 @@ Con pip, en cualquier Python ≥ 3.11:
 pip install -e ".[dev]"
 ```
 
-## Uso
+## Uso rápido
 
 ```bash
-split-steal list                                   # estrategias del roster oficial
-split-steal tournament --seed 42 --name mi_run     # juega y guarda en results/runs/mi_run/
-split-steal tournament --k 1 --rounds 200 -v       # otra configuración, mostrando ascensos
-split-steal stats results/runs/mi_run              # tabla resumen por estrategia
-split-steal plot  results/runs/mi_run              # gráficas en results/runs/mi_run/figs/
-split-steal --help                                 # todas las opciones
+split-steal catalog                                        # todas las estrategias
+split-steal tournament --name demo                         # un torneo -> results/runs/demo/
+split-steal tournament --seeds 50 --noise 0.05 --name s50  # el mismo con 50 semillas, en paralelo
+split-steal experiment experiments/ruido.toml              # un experimento completo
+split-steal compare results/experiments/ruido --top 15     # tabla estrategia × variante
+split-steal plot results/experiments/ruido                 # gráficas en .../figs/
+split-steal evolve --initial "AlwaysSteal=0.98,TitForTat=0.02"   # simulación evolutiva
 ```
 
-(`python -m split_steal ...` funciona igual.)
+(`python -m split_steal ...` funciona igual.) La **[guía de usuario](docs/GUIA_USUARIO.md)**
+explica todas las opciones: selección de estrategias, ajustes, archivos de experimento,
+qué contiene cada archivo de resultados y cómo analizarlos.
 
-Para regenerar el run canónico, con los mismos datos byte a byte:
+El run canónico (un torneo de referencia: 36 estrategias, 6 ligas × 6, 20 temporadas, sin
+ruido, semilla 42) está en `results/canonical/` y se explica paso a paso en
+[`notebooks/01_torneo_canonico.ipynb`](notebooks/01_torneo_canonico.ipynb). Se regenera
+idéntico byte a byte:
 
 ```bash
-split-steal tournament --name canonical --out-dir results/canonical
-split-steal plot results/canonical/canonical
+split-steal tournament --name canonical --out-dir results
+split-steal plot results/canonical
 git status   # sin cambios
 ```
-
-Cada run guarda:
-
-| Archivo | Contenido |
-|---|---|
-| `config.json` | parámetros, semilla y lista de estrategias |
-| `matches.csv` | un partido por fila: `season, league, A, B, pa, pb, seed` |
-| `standings.csv` | clasificación: `season, league, position, name, points` |
-| `strategy_stats.csv` | por estrategia y liga: rondas jugadas, nº de SPLIT/STEAL y puntos con cada uno |
-
-Los notebooks de `notebooks/` analizan el run canónico: `01_quick_eda` compara
-estrategias y `02_league_dynamics` estudia los ascensos y descensos.
 
 ## Estructura del código
 
 ```
 src/split_steal/
-  strategies.py   Strategy (clase abstracta) + las 30 estrategias
-  register.py     rosters: qué estrategias participan ({nombre: instancia})
-  simulator.py    motor: matriz de pagos, play_match, League, League_Tournament
+  strategies.py   Strategy (clase abstracta) + estrategias, con parámetros y etiquetas
+  register.py     catálogo, presets y selección de estrategias a partir de texto
+  simulator.py    motor: pagos, play_match (con ruido), desempates, ligas, formatos
+  analysis.py     tablas derivadas: estadísticas, clasificación final, resumen entre
+                  semillas, matriz de enfrentamientos
   runner.py       TournamentConfig -> run_tournament -> save_run / load_run
+  multiseed.py    el mismo torneo con N semillas, en paralelo (procesos)
+  experiment.py   experimentos .toml: variantes, barridos, catálogo y comparación
+  evolution.py    evolución: matriz de pagos entre estrategias + dinámica del replicador
   plots.py        gráficas (matplotlib)
   cli.py          comandos de terminal (Typer)
-tests/            pytest: reglas, ligas, reproducibilidad
+experiments/      experimentos de ejemplo (.toml)
+results/          canonical/ (versionado), experiments/ (resúmenes versionados), runs/ (local)
+notebooks/        presentación de resultados (se ejecutan a mano); 03_informe genera el informe
+docs/             guía de usuario e informe (Word + script que lo monta)
+tests/            pytest: reglas, estrategias, ligas, desempates, paralelo, experimentos
 ```
 
 Flujo de datos:
 
 ```
-TournamentConfig ─► register.ROSTERS[roster]() ─► League_Tournament.run(seed)
-                                                     │  temporada 0: League con todas
-                                                     │  temporadas 1..N: League por liga + ascensos/descensos
-                                                     ▼
-                               matches / standings / strategy_stats (DataFrames)
-                                                     ▼
-                         save_run ─► results/runs/<nombre>/  ─► stats · plot · notebooks
+experiment.toml ─► variantes (TournamentConfig) × semillas ─► run_many (procesos en paralelo)
+                                                                 │ run_tournament(config)
+                                                                 │   register.build_roster ─► estrategias nuevas
+                                                                 │   League_Tournament | RoundRobinTournament
+                                                                 │     └─ play_match ─► MatchResult (hechos del partido)
+                                                                 ▼
+                         matches / standings  ─► analysis ─► strategy_stats, final_ranking, summary
+                                                                 ▼
+                 results/experiments/<nombre>/ (summary.csv, variants/...) + results/index.csv
+                                                                 ▼
+                                               compare · plot · notebooks
 ```
 
 ## Añadir una estrategia
@@ -142,53 +175,64 @@ TournamentConfig ─► register.ROSTERS[roster]() ─► League_Tournament.run(
 
    ```python
    class MiEstrategia(Strategy):
-       """Coopera salvo si el rival ha robado más de la mitad de las veces."""
-       def __init__(self):
-           super().__init__("MiEstrategia")
+       """Coopera salvo si el rival ha robado más de una fracción `umbral` de las veces."""
+       tags = frozenset({"amable", "vengativa", "perdona"})
+
+       def __init__(self, umbral: float = 0.5):
+           super().__init__()
+           self.umbral = float(umbral)       # cada parámetro, en un atributo con su nombre
 
        def act(self, h_self, h_opp, rng):
-           if h_opp and h_opp.count(STEAL) > len(h_opp) / 2:
+           if h_opp and h_opp.count(STEAL) > self.umbral * len(h_opp):
                return STEAL
            return SPLIT
    ```
 
    - `h_self` / `h_opp`: jugadas anteriores (`SPLIT = 0`, `STEAL = 1`) en este partido.
-   - Para el azar usa **siempre** `rng` (p. ej. `rng.random()`), nunca `random`.
-     Así el torneo es reproducible.
-   - Si guardas estado en atributos, bórralo en `reset()`, que se llama antes de cada
-     partido.
-2. Añádela a una lista de `register.py`. Si cambia el número de estrategias, ajusta
-   `--n-leagues` y `--n-per-league` para que el producto coincida.
-
-`UserStrategy` es una plantilla lista para editar. Está en el roster de prueba:
-`split-steal tournament --roster prueba --n-leagues 5 --n-per-league 5`.
+   - Para el azar usa **siempre** `rng` (p. ej. `rng.random()`), nunca `random`: así el
+     torneo es reproducible.
+   - Si guardas estado en atributos, bórralo en `reset()`, que se llama antes de cada partido.
+   - El primer párrafo del docstring es su descripción y `tags` sus etiquetas (los tests
+     comprueban que las `amable` nunca roban primero y las `traicionera` sí).
+2. Ya está en el catálogo: úsala con `--roster "full, +MiEstrategia(umbral=0.3)"`. Para
+   que sea oficial, añádela a `PRESETS["full"]` en `register.py` (y ajusta las ligas para que
+   el número cuadre). `UserStrategy` es una plantilla lista para editar.
 
 ## Decisiones de diseño
 
-- **Reproducibilidad con una sola semilla.** El torneo deriva de la semilla maestra
-  la de cada temporada, la de cada liga y la de cada partido. Cada partido tiene su
-  propio generador aleatorio, que reciben las estrategias. Misma configuración, mismos
-  resultados; lo comprueban los tests.
-- **Estrategias como objetos con una sola decisión** (`act`). Así es fácil añadirlas
-  y testearlas aisladas. `reset()` garantiza que un partido no dependa de los anteriores.
-- **Motor sin efectos secundarios.** `simulator.py` no escribe archivos ni imprime
-  nada. La persistencia está en `runner.py` y la presentación en `plots.py` y `cli.py`.
-- **Formato de resultados "tidy"**: una fila por observación, fácil de analizar con pandas.
-- **Validación temprana.** El torneo rechaza configuraciones imposibles (estrategias
-  que no caben en las ligas, más ascensos que plazas) en lugar de simular algo incorrecto.
+- **Reproducibilidad con una sola semilla.** De la semilla maestra salen la de cada temporada,
+  liga y partido; cada partido tiene su propio generador. El ruido usa un generador aparte, así
+  que con y sin ruido las estrategias reciben los mismos números aleatorios. Misma
+  configuración, mismos resultados byte a byte, también en paralelo (lo comprueban los tests).
+- **Una única fuente de verdad.** El motor registra los hechos de cada partido (cooperaciones,
+  traiciones, represalias, errores...); todas las estadísticas se calculan después a partir de
+  ellos en `analysis.py`. Las estrategias solo deciden.
+- **Capas con una sola responsabilidad.** El motor no escribe archivos; la persistencia está en
+  `runner.py`/`multiseed.py`/`experiment.py` y la presentación en `plots.py`/`cli.py`.
+- **Datos "tidy"**: una fila por observación y una columna `seed` en lugar de una carpeta por
+  semilla. Un `groupby` basta para analizar.
+- **Validación temprana.** Configuraciones imposibles o experimentos mal escritos fallan antes
+  de jugar, con un mensaje que dice qué está mal.
+- **Comprobar el comportamiento, no fiarse del nombre.** Un test compara cómo juega cada
+  estrategia contra todas las demás: detectó dos que, pese a su descripción, jugaban
+  exactamente como `TitForTat` (una se eliminó y otra, `WinStayLoseShift`, se corrigió).
 
 ## Limitaciones conocidas
 
-- **Desempate alfabético.** Es determinista, pero no justo: cuando varias estrategias
-  empatan (frecuente en la Liga 1), el nombre decide quién baja.
-- **Una sola semilla.** Las estrategias aleatorias (`RandomP`, `NoisyTitForTat`…)
-  pueden cambiar de puesto con otra semilla. Para conclusiones robustas habría que
-  repetir el torneo con muchas semillas.
-- **Sin ruido de ejecución.** Las jugadas nunca se "equivocan", salvo en las
-  estrategias que lo simulan.
+- **Evolución sin mutaciones ni espacio.** No aparecen estrategias nuevas y todas se cruzan con todas.
+- **Duración conocida y fija.** Los partidos duran siempre lo mismo; no se modela una
+  probabilidad de que el partido termine en cada ronda.
+- **Solo ruido de ejecución.** No hay ruido de percepción (ver mal lo que hizo el rival).
+- **`Extortioner` depende de los pagos 3/0/5/1**: con otros pagos pierde su propiedad
+  matemática. No está en el roster oficial.
 
 ## Tests
 
 ```bash
 pytest
 ```
+
+## Licencia
+
+[MIT](LICENSE) © 2026 Jacobo Migoya. Puedes usar, modificar y compartir el código libremente,
+manteniendo el aviso de copyright.

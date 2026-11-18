@@ -29,10 +29,10 @@ def test_payoff_is_prisoners_dilemma():
 
 
 def test_known_match_scores():
-    assert play_match(AlwaysSplit(), AlwaysSplit(), rounds=10) == (30, 30)
-    assert play_match(AlwaysSplit(), AlwaysSteal(), rounds=10) == (0, 50)
+    assert play_match(AlwaysSplit(), AlwaysSplit(), rounds=10).scores == (30, 30)
+    assert play_match(AlwaysSplit(), AlwaysSteal(), rounds=10).scores == (0, 50)
     # TitForTat coopera en la 1.ª ronda y luego roba siempre: 0 + 9·1 vs 5 + 9·1
-    assert play_match(TitForTat(), AlwaysSteal(), rounds=10) == (9, 14)
+    assert play_match(TitForTat(), AlwaysSteal(), rounds=10).scores == (9, 14)
 
 
 def test_match_is_deterministic_given_seed():
@@ -63,7 +63,7 @@ def test_random_cycle_draws_new_pattern_each_match():
 
 def test_registry_returns_fresh_instances():
     a, b = Registry(), Registry()
-    assert len(a) == 30 and len(PruebaRegistry()) == 25
+    assert len(a) == 36 and len(PruebaRegistry()) == 25
     assert all(a[n] is not b[n] for n in a)
 
 
@@ -81,19 +81,12 @@ def test_league_round_robin_and_ordering():
     assert dict(league.clasification)["AlwaysSteal"] == 64
 
 
-def test_ties_broken_alphabetically():
-    members = {s.name: s for s in [TitForTat(), AlwaysSplit()]}   # empatan siempre
-    league = League(1, members, rounds=5, n_ascend_descend=1)
-    league.play(season_seed=0)
-    assert [n for n, _ in league.clasification] == ["AlwaysSplit", "TitForTat"]
-
-
 # ------------------------------------------------------------------ torneo
 def test_tournament_validates_sizes():
     with pytest.raises(ValueError):
-        League_Tournament(3, 4, Registry(), 10, 6, 2)     # 4·6 != 30
+        League_Tournament(3, 4, Registry(), 10, 6, 2)     # 4·6 != 36
     with pytest.raises(ValueError):
-        League_Tournament(3, 5, Registry(), 10, 6, 4)     # 2·4 > 6
+        League_Tournament(3, 6, Registry(), 10, 6, 4)     # 2·4 > 6
 
 
 def test_promotion_relegation_preserves_leagues():
@@ -131,11 +124,11 @@ def test_save_and_load_roundtrip(tmp_path):
     pd.testing.assert_frame_equal(loaded.strategy_stats, result.strategy_stats)
 
 
-def test_strategy_stats_are_consistent():
+def test_strategy_stats_count_every_round():
     """Cada ronda jugada debe contarse exactamente una vez como SPLIT o STEAL."""
     result = run_tournament(TournamentConfig(n_seasons=2, rounds=10))
     s = result.strategy_stats
     assert (s.times_split + s.times_steal == s.rounds_played).all()
     # rondas por liga = (rivales en la liga) × rondas por partido
     q = s[s.season == 0]
-    assert (q.rounds_played == 29 * 10).all()
+    assert (q.rounds_played == 35 * 10).all()

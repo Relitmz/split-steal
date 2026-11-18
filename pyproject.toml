@@ -10,6 +10,8 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "split-steal"
 version = "0.1.0"
+license = { text = "MIT" }
+authors = [{ name = "Jacobo Migoya" }]
 description = "Torneos de estrategias para el dilema Split/Steal iterado, con ligas, ascensos y descensos"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -17,6 +19,8 @@ dependencies = ["numpy", "pandas", "matplotlib", "typer"]
 
 [project.optional-dependencies]
 dev = ["pytest"]
+# Para regenerar el informe (notebooks/03_informe.ipynb y docs/informe/build_informe.py)
+report = ["jupyterlab", "python-docx"]
 
 [project.scripts]
 split-steal = "split_steal.cli:app"
