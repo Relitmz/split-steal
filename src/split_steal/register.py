@@ -20,7 +20,7 @@ from typing import Callable, Dict, List
 from .strategies import (
     Adaptive, Alternator, AlwaysOpposite, AlwaysSplit, AlwaysSteal, BackstabAfter10,
     CautiousStart, ConditionalRandom, CopycatDelayed, DoubleStealStart,
-    EveryThirdSplit, Extortioner, FirstStealThenSplit, ForgiveAfter3,
+    EveryThirdSplit, FirstStealThenSplit, ForgiveAfter3, HardMajority,
     ForgivingTitForTat, GenerousTitForTat, Gradual, GreedyStart, GrimTrigger, Joss,
     MimicMajority, Mirror2Rounds, NoisyTitForTat, ProbTitForTat, Prober,
     RandomAfterLoss, RandomCycle, RandomP, RevengeMode, SplitEvery4, SplitSplitSteal,
@@ -70,7 +70,7 @@ def _full_roster() -> List[Strategy]:
         Prober(),
         Joss(),
         Adaptive(),
-        Extortioner(),
+        HardMajority(),
     ]
 
 

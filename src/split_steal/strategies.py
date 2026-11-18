@@ -768,6 +768,23 @@ class Adaptive(Strategy):
         return SPLIT if avg[SPLIT] >= avg[STEAL] else STEAL
 
 
+class HardMajority(Strategy):
+    """Mayoría dura (Go By Majority "hard", Axelrod): empieza robando y después juega
+    lo que el rival ha hecho más veces en el partido; en caso de empate, roba.
+
+    Es la versión desconfiada de MimicMajority (que empieza cooperando y en empate coopera).
+    """
+    tags = frozenset({"traicionera", "vengativa", "perdona", "clasica"})
+
+    def __init__(self):
+        super().__init__()
+
+    def act(self, h_self, h_opp, rng):
+        if not h_opp:
+            return STEAL
+        return SPLIT if h_opp.count(SPLIT) > h_opp.count(STEAL) else STEAL
+
+
 class Extortioner(Strategy):
     """Extorsionadora "Zero-Determinant" (Press y Dyson, 2012): decide al azar con
     una probabilidad de cooperar que depende de lo que pasó en la ronda anterior:
@@ -778,6 +795,8 @@ class Extortioner(Strategy):
     Con pagos 3/0/5/1 estas probabilidades fuerzan matemáticamente que sus puntos
     por encima del castigo mutuo (1) sean el DOBLE que los del rival: nunca pierde
     un partido... pero suele ganarlos por poco y con pocos puntos. Empieza cooperando.
+
+    No está en el roster oficial: se añade a mano en los experimentos.
     """
     tags = frozenset({"traicionera", "vengativa", "perdona", "aleatoria", "clasica"})
 

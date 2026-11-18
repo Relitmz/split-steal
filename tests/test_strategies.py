@@ -10,7 +10,7 @@ from split_steal.register import Registry
 from split_steal.simulator import play_match
 from split_steal.strategies import (SPLIT, STEAL, TAGS, Adaptive, AlwaysSplit, AlwaysSteal,
                                     Extortioner, ForgivingTitForTat, GenerousTitForTat,
-                                    Gradual, Joss, Mirror2Rounds, Prober, Strategy,
+                                    Gradual, HardMajority, Joss, Mirror2Rounds, Prober, Strategy,
                                     SuspiciousTitForTat, TitForTat)
 
 
@@ -126,9 +126,16 @@ def test_adaptive_state_is_reset_between_matches():
     assert play_match(used, TitForTat(), rounds=30, seed=3) == fresh
 
 
+def test_hard_majority_starts_stealing_and_breaks_ties_by_stealing():
+    assert moves_of(HardMajority(), AlwaysSplit(), rounds=4) == [1, 0, 0, 0]
+    # rival: S, St, S -> ronda 3: empate 1-1, roba; ronda 4: 2-1 a favor de SPLIT, coopera
+    assert moves_of(HardMajority(), Scripted([SPLIT, STEAL, SPLIT]), rounds=4) == [1, 0, 1, 0]
+
+
 @pytest.mark.parametrize("opponent", [AlwaysSplit, TitForTat, ForgivingTitForTat])
 def test_extortioner_enforces_two_to_one_surplus(opponent):
-    """Propiedad Zero-Determinant: (mis puntos - 1) ≈ 2 · (puntos del rival - 1) por ronda."""
+    """(Extortioner no está en el roster oficial, pero se puede usar en experimentos.)
+    Propiedad Zero-Determinant: (mis puntos - 1) ≈ 2 · (puntos del rival - 1) por ronda."""
     rounds = 50_000
     pe, po = play_match(Extortioner(), opponent(), rounds=rounds, seed=11)
     surplus_e, surplus_o = pe / rounds - 1, po / rounds - 1
