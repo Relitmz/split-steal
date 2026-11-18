@@ -32,8 +32,8 @@ from .simulator import League_Tournament
 class TournamentConfig:
     """Todos los parámetros que definen un torneo. Mismo config  =>  mismo resultado."""
 
-    roster: str = "full"          # clave de register.ROSTERS: "full" (30) o "prueba" (25)
-    n_leagues: int = 5
+    roster: str = "full"          # clave de register.ROSTERS: "full" (36) o "prueba" (25)
+    n_leagues: int = 6
     n_per_league: int = 6
     rounds: int = 100             # rondas por partido
     n_seasons: int = 20           # temporadas tras la clasificatoria

@@ -65,14 +65,15 @@ def list_strategies(roster: str = typer.Option("full", help="Roster: full | prue
     members = ROSTERS[roster]()
     typer.echo(f"Roster '{roster}': {len(members)} estrategias")
     for name, strategy in members.items():
-        doc = (type(strategy).__doc__ or "").strip().splitlines()[0]
-        typer.echo(f"  {name:<24} {doc}")
+        tags = ", ".join(sorted(strategy.tags))
+        typer.echo(f"  {name:<24} [{tags}]")
+        typer.echo(f"  {'':<24} {strategy.description()}")
 
 
 @app.command()
 def tournament(
-    roster: str = typer.Option("full", help="Roster: full (30) | prueba (25)"),
-    n_leagues: int = typer.Option(5, help="Número de ligas"),
+    roster: str = typer.Option("full", help="Roster: full (36) | prueba (25)"),
+    n_leagues: int = typer.Option(6, help="Número de ligas"),
     n_per_league: int = typer.Option(6, help="Estrategias por liga"),
     rounds: int = typer.Option(100, help="Rondas por partido"),
     n_seasons: int = typer.Option(20, help="Temporadas (sin contar la clasificatoria)"),

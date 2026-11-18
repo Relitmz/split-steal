@@ -63,7 +63,7 @@ def test_random_cycle_draws_new_pattern_each_match():
 
 def test_registry_returns_fresh_instances():
     a, b = Registry(), Registry()
-    assert len(a) == 30 and len(PruebaRegistry()) == 25
+    assert len(a) == 36 and len(PruebaRegistry()) == 25
     assert all(a[n] is not b[n] for n in a)
 
 
@@ -91,9 +91,9 @@ def test_ties_broken_alphabetically():
 # ------------------------------------------------------------------ torneo
 def test_tournament_validates_sizes():
     with pytest.raises(ValueError):
-        League_Tournament(3, 4, Registry(), 10, 6, 2)     # 4·6 != 30
+        League_Tournament(3, 4, Registry(), 10, 6, 2)     # 4·6 != 36
     with pytest.raises(ValueError):
-        League_Tournament(3, 5, Registry(), 10, 6, 4)     # 2·4 > 6
+        League_Tournament(3, 6, Registry(), 10, 6, 4)     # 2·4 > 6
 
 
 def test_promotion_relegation_preserves_leagues():
@@ -138,4 +138,4 @@ def test_strategy_stats_are_consistent():
     assert (s.times_split + s.times_steal == s.rounds_played).all()
     # rondas por liga = (rivales en la liga) × rondas por partido
     q = s[s.season == 0]
-    assert (q.rounds_played == 29 * 10).all()
+    assert (q.rounds_played == 35 * 10).all()

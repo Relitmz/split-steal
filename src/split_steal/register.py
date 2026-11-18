@@ -11,27 +11,28 @@ Decisiones de diseño:
   compartir objetos (si no, el segundo heredaría los contadores del primero).
 - Los nombres deben ser únicos. Se comprueba sobre la LISTA antes de construir el
   dict, porque un dict descartaría el duplicado en silencio.
-- El roster oficial tiene 30 estrategias para poder repartirlas en ligas iguales
-  (5 ligas × 6 o 3 ligas × 10).
+- El roster oficial tiene 36 estrategias para poder repartirlas en ligas iguales
+  (6 ligas × 6, 4 × 9, 3 × 12...).
 """
 
 from typing import Callable, Dict, List
 
 from .strategies import (
-    Alternator, AlwaysOpposite, AlwaysSplit, AlwaysSteal, BackstabAfter10,
+    Adaptive, Alternator, AlwaysOpposite, AlwaysSplit, AlwaysSteal, BackstabAfter10,
     CautiousStart, ConditionalRandom, CopycatDelayed, DoubleStealStart,
-    EveryThirdSplit, FirstStealThenSplit, ForgiveAfter3, ForgivingTitForTat,
-    GreedyStart, GrimTrigger, MimicMajority, Mirror2Rounds, NoisyTitForTat,
-    ProbTitForTat, RandomAfterLoss, RandomCycle, RandomP, RevengeMode,
-    RevengeOneRound, SplitEvery4, SplitSplitSteal, SplitUntilBetrayedTwice,
-    Strategy, TitForTat, TwoTitsForTat, UserStrategy, WinStayLoseShift,
+    EveryThirdSplit, Extortioner, FirstStealThenSplit, ForgiveAfter3,
+    ForgivingTitForTat, GenerousTitForTat, Gradual, GreedyStart, GrimTrigger, Joss,
+    MimicMajority, Mirror2Rounds, NoisyTitForTat, ProbTitForTat, Prober,
+    RandomAfterLoss, RandomCycle, RandomP, RevengeMode, SplitEvery4, SplitSplitSteal,
+    SplitUntilBetrayedTwice, Strategy, SuspiciousTitForTat, TitForTat, TwoTitsForTat,
+    UserStrategy, WinStayLoseShift,
 )
 
 Roster = Dict[str, Strategy]
 
 
 def _full_roster() -> List[Strategy]:
-    """Roster oficial: 30 estrategias."""
+    """Roster oficial: 36 estrategias (las 29 originales + 7 clásicas de la literatura)."""
     return [
         AlwaysSplit(),
         AlwaysSteal(),
@@ -40,13 +41,12 @@ def _full_roster() -> List[Strategy]:
         GrimTrigger(),
         WinStayLoseShift(),
         TwoTitsForTat(),
-        ForgivingTitForTat(0.1),
+        ForgivingTitForTat(),
         Alternator(),
         MimicMajority(),
         AlwaysOpposite(),
         FirstStealThenSplit(),
         SplitEvery4(),
-        RevengeOneRound(),
         DoubleStealStart(),
         ProbTitForTat(0.8),
         ForgiveAfter3(),
@@ -63,6 +63,14 @@ def _full_roster() -> List[Strategy]:
         EveryThirdSplit(),
         ConditionalRandom(),
         SplitSplitSteal(),
+        # Clásicas añadidas
+        GenerousTitForTat(),
+        SuspiciousTitForTat(),
+        Gradual(),
+        Prober(),
+        Joss(),
+        Adaptive(),
+        Extortioner(),
     ]
 
 
@@ -70,8 +78,8 @@ def _test_roster() -> List[Strategy]:
     """
     Roster de prueba: 25 estrategias (cabe en 5 ligas × 5). Respecto al oficial
     no incluye TwoTitsForTat, ForgivingTitForTat, ProbTitForTat, NoisyTitForTat,
-    ConditionalRandom ni SplitSplitSteal, y añade `UserStrategy` para probar una
-    estrategia propia.
+    ConditionalRandom, SplitSplitSteal ni las clásicas añadidas (salvo
+    SuspiciousTitForTat), y añade `UserStrategy` para probar una estrategia propia.
     """
     return [
         AlwaysSplit(),
@@ -85,7 +93,7 @@ def _test_roster() -> List[Strategy]:
         AlwaysOpposite(),
         FirstStealThenSplit(),
         SplitEvery4(),
-        RevengeOneRound(),
+        SuspiciousTitForTat(),
         DoubleStealStart(),
         ForgiveAfter3(),
         RandomAfterLoss(),
@@ -112,7 +120,7 @@ def _to_roster(strategies: List[Strategy]) -> Roster:
 
 
 def Registry() -> Roster:
-    """Roster oficial (30 estrategias), con instancias nuevas en cada llamada."""
+    """Roster oficial (36 estrategias), con instancias nuevas en cada llamada."""
     return _to_roster(_full_roster())
 
 
