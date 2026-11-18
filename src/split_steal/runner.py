@@ -24,7 +24,7 @@ from typing import List, Optional, Union
 
 import pandas as pd
 
-from .register import ROSTERS
+from .register import build_roster
 from .simulator import League_Tournament
 
 
@@ -32,7 +32,9 @@ from .simulator import League_Tournament
 class TournamentConfig:
     """Todos los parámetros que definen un torneo. Mismo config  =>  mismo resultado."""
 
-    roster: str = "full"          # clave de register.ROSTERS: "full" (36) o "prueba" (25)
+    # Quién juega: un preset ("full", "clasicas"...) o una lista de estrategias,
+    # p. ej. ["TitForTat", "ForgivingTitForTat(p=0.2)"]. Ver register.build_roster.
+    roster: Union[str, List[str]] = "full"
     n_leagues: int = 6
     n_per_league: int = 6
     rounds: int = 100             # rondas por partido
@@ -55,9 +57,7 @@ class TournamentResult:
 
 def run_tournament(config: TournamentConfig, verbose: bool = False) -> TournamentResult:
     """Construye el roster, juega el torneo y devuelve sus tablas de resultados."""
-    if config.roster not in ROSTERS:
-        raise ValueError(f"Roster desconocido '{config.roster}'. Opciones: {', '.join(ROSTERS)}")
-    members = ROSTERS[config.roster]()   # instancias nuevas en cada torneo
+    members = build_roster(config.roster)   # instancias nuevas en cada torneo
 
     tournament = League_Tournament(
         n_seasons=config.n_seasons,

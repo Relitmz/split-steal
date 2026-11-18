@@ -4,7 +4,9 @@ Interfaz de línea de comandos (Typer).
 Tras `pip install -e .` queda disponible el comando `split-steal`
 (también `python -m split_steal`):
 
-    split-steal list                         # estrategias de un roster
+    split-steal catalog                      # TODAS las estrategias que existen (y sus parámetros)
+    split-steal presets                      # grupos de estrategias con nombre
+    split-steal list clasicas                # estrategias de un preset o selección
     split-steal tournament --seed 42         # juega un torneo y lo guarda en results/runs/
     split-steal stats  results/runs/<run>    # tabla resumen por estrategia
     split-steal plot   results/runs/<run>    # genera las gráficas en <run>/figs/
@@ -26,7 +28,7 @@ for _stream in (sys.stdout, sys.stderr):
     if hasattr(_stream, "reconfigure"):
         _stream.reconfigure(errors="replace")
 
-from .register import ROSTERS
+from .register import CATALOG, PRESETS, build_roster
 from .runner import TournamentConfig, load_run, run_tournament, save_run
 
 app = typer.Typer(help="Torneos de estrategias Split/Steal con ligas, ascensos y descensos.",
@@ -57,13 +59,42 @@ def summarize(matches: pd.DataFrame) -> pd.DataFrame:
              .sort_values(["mean_payoff", "wins"], ascending=[False, False], ignore_index=True))
 
 
+ROSTER_HELP = ('Preset (full, clasicas, cooperativas, cooperativas_con_traidores, prueba) '
+               'o lista separada por comas, p. ej. "TitForTat, AlwaysSteal, ForgivingTitForTat(p=0.2)"')
+
+
+def _build(selection: str):
+    """build_roster con los errores convertidos en mensajes de la CLI."""
+    try:
+        return build_roster(selection)
+    except ValueError as e:
+        raise typer.BadParameter(str(e))
+
+
+@app.command("catalog")
+def catalog():
+    """Muestra TODAS las estrategias disponibles, sus parámetros y si están en el roster oficial."""
+    official = set(PRESETS["full"])
+    typer.echo(f"{len(CATALOG)} estrategias ({len(official)} en el roster oficial 'full'; * = fuera de él)")
+    for name, cls in sorted(CATALOG.items()):
+        params = ", ".join(f"{k}={v!r}" for k, v in cls.default_params().items())
+        mark = " " if name in official else "*"
+        typer.echo(f" {mark}{name}" + (f"({params})" if params else ""))
+        typer.echo(f"   [{', '.join(sorted(cls.tags))}] {cls.description()}")
+
+
+@app.command("presets")
+def presets():
+    """Muestra los presets (grupos de estrategias con nombre)."""
+    for name, specs in PRESETS.items():
+        typer.echo(f"{name} ({len(specs)}): {', '.join(specs)}\n")
+
+
 @app.command("list")
-def list_strategies(roster: str = typer.Option("full", help="Roster: full | prueba")):
-    """Muestra las estrategias de un roster."""
-    if roster not in ROSTERS:
-        raise typer.BadParameter(f"opciones: {', '.join(ROSTERS)}")
-    members = ROSTERS[roster]()
-    typer.echo(f"Roster '{roster}': {len(members)} estrategias")
+def list_strategies(roster: str = typer.Argument("full", help=ROSTER_HELP)):
+    """Muestra las estrategias de un preset o selección, con etiquetas y descripción."""
+    members = _build(roster)
+    typer.echo(f"Selección '{roster}': {len(members)} estrategias")
     for name, strategy in members.items():
         tags = ", ".join(sorted(strategy.tags))
         typer.echo(f"  {name:<24} [{tags}]")
@@ -72,7 +103,7 @@ def list_strategies(roster: str = typer.Option("full", help="Roster: full | prue
 
 @app.command()
 def tournament(
-    roster: str = typer.Option("full", help="Roster: full (36) | prueba (25)"),
+    roster: str = typer.Option("full", help=ROSTER_HELP),
     n_leagues: int = typer.Option(6, help="Número de ligas"),
     n_per_league: int = typer.Option(6, help="Estrategias por liga"),
     rounds: int = typer.Option(100, help="Rondas por partido"),
