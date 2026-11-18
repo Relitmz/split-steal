@@ -205,6 +205,43 @@ def resolve_selection(selection: Selection) -> List[str]:
     return specs
 
 
+def spec_of(strategy: Strategy) -> str:
+    """Texto que vuelve a crear EXACTAMENTE esta estrategia (con todos sus parámetros
+    no por defecto, sin redondear): `make_strategy(spec_of(s))` equivale a `s`."""
+    defaults = strategy.default_params()
+    changed = {k: v for k, v in strategy.params.items() if v != defaults[k]}
+    args = ", ".join(f"{k}={v!r}" for k, v in changed.items())
+    return type(strategy).__name__ + (f"({args})" if args else "")
+
+
+def set_strategy_param(selection: Selection, class_name: str, param: str, value) -> List[str]:
+    """
+    Devuelve la selección (como lista de textos) con el parámetro `param` de TODAS las
+    estrategias de la clase `class_name` cambiado a `value`.
+
+        set_strategy_param("cooperativas", "ForgivingTitForTat", "p", 0.2)
+        -> [..., "ForgivingTitForTat(p=0.2)", ...]
+
+    Es lo que usan los barridos de los experimentos ("ForgivingTitForTat.p" = [...]).
+    Ojo: GenerousTitForTat es OTRA clase (aunque herede de ForgivingTitForTat): no cambia.
+    """
+    if class_name not in CATALOG:
+        raise ValueError(f"Estrategia desconocida '{class_name}'")
+    if param not in CATALOG[class_name].default_params():
+        opciones = ", ".join(CATALOG[class_name].default_params()) or "(no tiene parámetros)"
+        raise ValueError(f"{class_name} no tiene el parámetro '{param}'. Parámetros: {opciones}")
+    specs, found = [], False
+    for spec in resolve_selection(selection):
+        strategy = make_strategy(spec)
+        if type(strategy).__name__ == class_name:
+            found = True
+            strategy = type(strategy)(**{**strategy.params, param: value})
+        specs.append(spec_of(strategy))
+    if not found:
+        raise ValueError(f"No se puede cambiar {class_name}.{param}: {class_name} no está en la selección")
+    return specs
+
+
 def build_roster(selection: Selection = "full") -> Roster:
     """Construye un roster nuevo (instancias nuevas) a partir de un preset o una lista."""
     return _to_roster([make_strategy(spec) for spec in resolve_selection(selection)])

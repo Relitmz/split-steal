@@ -111,6 +111,35 @@ def run_tournament(config: TournamentConfig, verbose: bool = False) -> Tournamen
     )
 
 
+def check_config(config: TournamentConfig) -> int:
+    """
+    Comprueba que un config se puede jugar SIN jugarlo (rápido) y devuelve el nº de
+    estrategias. Lanza ValueError con un mensaje claro si algo no cuadra. Útil antes
+    de lanzar muchos torneos (un experimento) para no fallar a mitad.
+    """
+    if config.format not in FORMATS:
+        raise ValueError(f"Formato desconocido '{config.format}'. Opciones: {', '.join(FORMATS)}")
+    if not 0.0 <= config.noise <= 1.0:
+        raise ValueError(f"noise debe estar entre 0 y 1 (es {config.noise})")
+    try:
+        Payoff(**config.payoff)
+    except TypeError:
+        raise ValueError(f"payoff solo admite las claves R, S, T y P (es {config.payoff})") from None
+    n = len(build_roster(config.roster))
+    if config.format == "leagues":
+        if n != config.n_leagues * config.n_per_league:
+            raise ValueError(
+                f"Se esperaban n_leagues × n_per_league = {config.n_leagues} × "
+                f"{config.n_per_league} = {config.n_leagues * config.n_per_league} "
+                f"estrategias, pero hay {n}.")
+        if config.n_ascend_descend < 0 or 2 * config.n_ascend_descend > config.n_per_league:
+            raise ValueError(f"n_ascend_descend={config.n_ascend_descend} no válido: "
+                             f"debe cumplirse 0 ≤ 2·k ≤ n_per_league ({config.n_per_league}).")
+    elif n < 2:
+        raise ValueError("Se necesitan al menos 2 estrategias.")
+    return n
+
+
 def _tidy_matches(matches: pd.DataFrame) -> pd.DataFrame:
     """Tipos limpios: la ronda del primer robo es un entero que puede faltar (Int64)."""
     for col in ("first_steal_a", "first_steal_b"):

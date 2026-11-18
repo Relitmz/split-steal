@@ -5,3 +5,5 @@ results/runs/
 .ipynb_checkpoints/
 CLAUDE.local.md
 *.egg-info/
+results/experiments/
+results/index.csv

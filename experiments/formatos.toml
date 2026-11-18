@@ -1,0 +1,21 @@
+# ¿Cambia el ganador según el formato del torneo?
+# Dos variantes escritas a mano (ligas frente a todos contra todos), cada una con y sin ruido.
+# Comparar:  split-steal compare results/experiments/formatos --metric title_rate --top 15
+
+name = "formatos"
+description = "Ligas con ascensos frente a todos contra todos, con y sin ruido"
+seeds = 50
+
+[base]
+roster = "full"
+
+[[variants]]
+name = "ligas"
+format = "leagues"
+
+[[variants]]
+name = "todos_contra_todos"
+format = "round_robin"
+
+[sweep]
+noise = [0.0, 0.05]

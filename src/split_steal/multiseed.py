@@ -88,17 +88,27 @@ def run_seeds(config: TournamentConfig, n_seeds: int = 50,
     workers: nº de procesos (por defecto, todos los núcleos). Con 1 se juega en
     serie en este mismo proceso (más fácil de depurar). El resultado no depende de él.
     """
-    if config.save_rounds:
-        raise ValueError("save_rounds no está soportado con varias semillas (ocuparía demasiado)")
     seeds = seeds_for(config, n_seeds)
-    configs = [replace(config, seed=s) for s in seeds]
-    workers = min(workers or default_workers(), len(configs))
+    results = run_many([replace(config, seed=s) for s in seeds], workers)
+    return combine(config, seeds, results)
 
-    if workers == 1:
-        results = [_run_one(c) for c in configs]
-    else:
-        with ProcessPoolExecutor(max_workers=workers) as pool:
-            results = list(pool.map(_run_one, configs))   # map conserva el orden
+
+def run_many(configs: List[TournamentConfig],
+             workers: Optional[int] = None) -> List[TournamentResult]:
+    """Juega una lista de torneos (en paralelo si workers > 1) y devuelve sus
+    resultados EN EL MISMO ORDEN que `configs`. Lo usan run_seeds y los experimentos."""
+    if any(c.save_rounds for c in configs):
+        raise ValueError("save_rounds no está soportado con varias semillas (ocuparía demasiado)")
+    workers = min(workers or default_workers(), len(configs))
+    if workers <= 1:
+        return [_run_one(c) for c in configs]
+    with ProcessPoolExecutor(max_workers=workers) as pool:
+        return list(pool.map(_run_one, configs))   # map conserva el orden
+
+
+def combine(config: TournamentConfig, seeds: List[int],
+            results: List[TournamentResult]) -> MultiSeedResult:
+    """Apila los resultados de cada semilla en tablas con columna `seed`."""
 
     def stack(table: str) -> pd.DataFrame:
         frames = [getattr(r, table).assign(seed=s) for s, r in zip(seeds, results)]

@@ -19,6 +19,7 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
+from typing import List
 
 import pandas as pd
 import typer
@@ -31,6 +32,8 @@ for _stream in (sys.stdout, sys.stderr):
         _stream.reconfigure(errors="replace")
 
 from .register import CATALOG, PRESETS, build_roster
+from .experiment import (Variant, variant_row, compare, load_experiment, run_experiment,
+                         save_experiment, update_index)
 from .multiseed import load_multi, run_seeds, save_multi
 from .runner import TournamentConfig, load_run, run_tournament, save_run
 from .simulator import Payoff
@@ -162,7 +165,73 @@ def tournament(
             run_dir = save_run(run_tournament(config, verbose=verbose), out_dir=out_dir, name=name)
     except ValueError as e:
         raise typer.BadParameter(str(e))
+    row = variant_row(Variant(name=name, config=config), seeds)
+    update_index(Path(out_dir).parent / "index.csv", f"tournament/{name}",
+                 [{**row, "path": Path(run_dir).as_posix()}])
     typer.echo(f"Resultados guardados en: {run_dir}")
+
+
+@app.command()
+def experiment(
+    file: Path = typer.Argument(..., help="Archivo .toml del experimento (ver experiments/)"),
+    out_dir: Path = typer.Option(Path("results/experiments"), help="Carpeta donde guardar"),
+    workers: int = typer.Option(None, help="Procesos en paralelo (por defecto, todos los núcleos)"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Solo mostrar las variantes, sin jugar"),
+):
+    """Ejecuta un experimento: todas sus variantes × semillas, y guarda la comparación."""
+    try:
+        exp = load_experiment(file)
+        variants = exp.expand()
+    except (ValueError, OSError) as e:
+        raise typer.BadParameter(str(e))
+    typer.echo(f"Experimento '{exp.name}': {len(variants)} variantes × {exp.seeds} semillas "
+               f"= {len(variants) * exp.seeds} torneos")
+    for v in variants:
+        typer.echo(f"  - {v.name}")
+    if dry_run:
+        return
+    start = time.perf_counter()
+    result = run_experiment(exp, workers=workers)
+    exp_dir = save_experiment(result, out_dir=out_dir)
+    typer.echo(f"Hecho en {time.perf_counter() - start:.1f} s. Resultados en: {exp_dir}")
+    typer.echo("\nPosición media por variante (mejores 12):")
+    typer.echo(compare([exp_dir]).head(12).round(1).to_string())
+
+
+@app.command("compare")
+def compare_cmd(
+    exp_dirs: List[Path] = typer.Argument(..., help="Una o varias carpetas de experimento"),
+    metric: str = typer.Option("rank_mean", help="Columna de summary.csv: rank_mean, title_rate, "
+                                                  "league1_rate, points_per_round, coop_rate..."),
+    strategies: str = typer.Option(None, help="Solo estas estrategias (separadas por comas)"),
+    top: int = typer.Option(None, help="Mostrar solo las N primeras filas"),
+    transpose: bool = typer.Option(False, "--transpose", "-t",
+                                   help="Variantes en filas y estrategias en columnas"),
+):
+    """Compara una métrica entre variantes: una fila por estrategia, una columna por variante."""
+    names = [s.strip() for s in strategies.split(",")] if strategies else None
+    try:
+        table = compare(exp_dirs, metric=metric, strategies=names)
+    except (ValueError, OSError) as e:
+        raise typer.BadParameter(str(e))
+    table = table.head(top) if top else table
+    if transpose:
+        typer.echo(f"{metric} (filas: variantes, columnas: estrategias)")
+        typer.echo(table.T.round(2).to_string())
+    else:
+        typer.echo(f"{metric} (filas: estrategias, columnas: variantes)")
+        typer.echo(table.round(2).to_string())
+
+
+@app.command("index")
+def index_cmd(results_dir: Path = typer.Option(Path("results"), help="Carpeta raíz de resultados")):
+    """Muestra el catálogo de todo lo simulado (results/index.csv)."""
+    path = results_dir / "index.csv"
+    if not path.exists():
+        raise typer.BadParameter(f"todavía no existe {path}")
+    cols = ["experiment", "variant", "created", "format", "roster", "n_strategies",
+            "n_seeds", "noise", "rounds"]
+    typer.echo(pd.read_csv(path)[cols].to_string(index=False))
 
 
 def _echo_summary(summary: pd.DataFrame, top: int = 12) -> None:
