@@ -162,7 +162,7 @@ def save_run(result: TournamentResult, out_dir: Union[str, Path] = "results/runs
 
     meta = {"config": asdict(result.config), "strategies": result.strategies}
     (run_dir / "config.json").write_text(
-        json.dumps(meta, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        json.dumps(meta, indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
 
     # lineterminator fijo: así los CSV son idénticos en Windows y Linux.
     for table in ("matches", "standings", "strategy_stats"):

@@ -134,7 +134,7 @@ def save_multi(result: MultiSeedResult, out_dir: Union[str, Path], name: str) ->
     run_dir.mkdir(parents=True, exist_ok=True)
     meta = {"config": asdict(result.config), "n_seeds": len(result.seeds), "seeds": result.seeds}
     (run_dir / "config.json").write_text(
-        json.dumps(meta, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        json.dumps(meta, indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
     for table in ("summary", "final_rankings", "standings", "strategy_stats"):
         getattr(result, table).to_csv(run_dir / f"{table}.csv", index=False, lineterminator="\n")
     result.matches.to_csv(run_dir / "matches.csv.gz", index=False, lineterminator="\n",

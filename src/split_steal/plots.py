@@ -19,12 +19,16 @@ divergente rojo-gris-azul (centrada en 0) para el heatmap, porque el signo impor
 paleta categórica en orden fijo y como mucho 8 series por gráfica (más no se distinguen).
 """
 
+import sys
 from pathlib import Path
 from typing import List, Optional
 
 import matplotlib
 
-matplotlib.use("Agg")  # backend sin ventana: genera archivos aunque no haya pantalla
+# Backend sin ventana ("Agg"): genera archivos aunque no haya pantalla (CLI, procesos
+# en paralelo, servidores). Dentro de Jupyter NO se fuerza, para que las figuras se vean.
+if "ipykernel" not in sys.modules:
+    matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd

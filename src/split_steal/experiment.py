@@ -265,7 +265,8 @@ def save_experiment(result: ExperimentResult, out_dir: Union[str, Path] = "resul
     exp = result.experiment
     exp_dir = Path(out_dir) / exp.name
     exp_dir.mkdir(parents=True, exist_ok=True)
-    (exp_dir / "experiment.toml").write_text(exp.source, encoding="utf-8")
+    # newline fijo: el archivo es idéntico en Windows y Linux (como los CSV)
+    (exp_dir / "experiment.toml").write_text(exp.source, encoding="utf-8", newline="\n")
     rows = [variant_row(v, exp.seeds) for v in result.variants]
     pd.DataFrame(rows).to_csv(exp_dir / "variants.csv", index=False, lineterminator="\n")
     result.summary.to_csv(exp_dir / "summary.csv", index=False, lineterminator="\n")
