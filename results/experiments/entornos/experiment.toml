@@ -1,0 +1,31 @@
+# ¿Depende de con quién te juntes?
+# Las mismas 8 estrategias "de referencia" juegan en tres mundos distintos:
+#   - amable:  rodeadas de estrategias que nunca traicionan primero
+#   - mixto:   el roster oficial completo (36)
+#   - hostil:  rodeadas de estrategias que pueden traicionar sin motivo
+# Todos contra todos, con y sin ruido. Como cada mundo tiene un nº distinto de
+# estrategias, para comparar mejor mira points_per_round o la posición relativa.
+# Comparar:  split-steal compare results/experiments/entornos --metric points_per_round \
+#            --strategies "TitForTat,GenerousTitForTat,Gradual,MimicMajority,GrimTrigger,WinStayLoseShift,AlwaysSplit,AlwaysSteal"
+
+name = "entornos"
+description = "8 estrategias de referencia en un mundo amable, mixto y hostil"
+seeds = 50
+
+[base]
+format = "round_robin"
+
+[[variants]]
+name = "amable"
+roster = "amables, AlwaysSteal"
+
+[[variants]]
+name = "mixto"
+roster = "full"
+
+[[variants]]
+name = "hostil"
+roster = "traicioneras, TitForTat, GenerousTitForTat, Gradual, MimicMajority, GrimTrigger, WinStayLoseShift, AlwaysSplit"
+
+[sweep]
+noise = [0.0, 0.05]

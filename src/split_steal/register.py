@@ -106,6 +106,12 @@ PRESETS: Dict[str, List[str]] = {
     ],
 }
 
+# Presets calculados a partir de las etiquetas: todas las del roster oficial que son
+# "amables" (nunca traicionan primero) o "traicioneras" (pueden traicionar sin motivo).
+# Sirven para crear entornos amables u hostiles: "traicioneras, TitForTat".
+PRESETS["amables"] = [n for n in _FULL if "amable" in CATALOG[n].tags]
+PRESETS["traicioneras"] = [n for n in _FULL if "traicionera" in CATALOG[n].tags]
+
 
 # ------------------------------------------------------------------ de texto a estrategia
 _SPEC_RE = re.compile(r"^\s*(\w+)\s*(?:\((.*)\))?\s*$")
