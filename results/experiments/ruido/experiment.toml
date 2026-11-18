@@ -1,0 +1,15 @@
+# ¿Qué estrategias resisten los errores?
+# Mismo torneo canónico con cada vez más ruido (probabilidad de que una jugada se invierta).
+# Ejecutar:  split-steal experiment experiments/ruido.toml
+# Comparar:  split-steal compare results/experiments/ruido --top 15
+
+name = "ruido"
+description = "Torneo canónico (36 estrategias, ligas) con ruido creciente"
+seeds = 50
+
+[base]
+format = "leagues"
+roster = "full"
+
+[sweep]
+noise = [0.0, 0.01, 0.05, 0.1]

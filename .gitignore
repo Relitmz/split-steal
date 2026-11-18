@@ -5,5 +5,8 @@ results/runs/
 .ipynb_checkpoints/
 CLAUDE.local.md
 *.egg-info/
-results/experiments/
+# Experimentos: se versionan experiment.toml, variants.csv, summary.csv y las gráficas
+# de comparación; NO los datos completos por variante ni los heatmaps (pesan mucho).
+results/experiments/*/variants/
+results/experiments/*/figs/head_to_head__*
 results/index.csv

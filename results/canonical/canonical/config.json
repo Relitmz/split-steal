@@ -1,13 +1,22 @@
 {
   "config": {
     "roster": "full",
-    "n_leagues": 5,
+    "format": "leagues",
+    "n_leagues": 6,
     "n_per_league": 6,
     "rounds": 100,
     "n_seasons": 20,
     "n_ascend_descend": 2,
     "seed": 42,
-    "qualifying": true
+    "qualifying": true,
+    "payoff": {
+      "R": 3,
+      "S": 0,
+      "T": 5,
+      "P": 1
+    },
+    "noise": 0.0,
+    "save_rounds": false
   },
   "strategies": [
     "AlwaysSplit",
@@ -23,7 +32,6 @@
     "AlwaysOpposite",
     "FirstStealThenSplit",
     "SplitEvery4",
-    "RevengeOneRound",
     "DoubleStealStart",
     "ProbTitForTat",
     "ForgiveAfter3",
@@ -39,6 +47,13 @@
     "GreedyStart",
     "EveryThirdSplit",
     "ConditionalRandom",
-    "SplitSplitSteal"
+    "SplitSplitSteal",
+    "GenerousTitForTat",
+    "SuspiciousTitForTat",
+    "Gradual",
+    "Prober",
+    "Joss",
+    "Adaptive",
+    "HardMajority"
   ]
 }
