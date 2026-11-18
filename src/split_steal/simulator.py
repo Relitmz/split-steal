@@ -10,6 +10,8 @@ Estructura en tres niveles (de menor a mayor):
 3. `League_Tournament`: varias ligas jerarquizadas (Liga 1 = la mejor) que se
    juegan durante varias temporadas; al final de cada una, los `k` primeros de cada
    liga suben a la de arriba y los `k` últimos bajan a la de abajo.
+4. `RoundRobinTournament`: formato alternativo, una única liga con todas (sin
+   temporadas ni ascensos), como en los torneos de Axelrod.
 
 Reproducibilidad: todo parte de UNA semilla. El torneo crea un generador con ella
 y de ahí saca la semilla de cada temporada/liga; cada liga saca de la suya la de
@@ -542,4 +544,53 @@ class League_Tournament:
         else:
             self.initialize_spread_leagues()
         self.simulate_seasons(seasons_seed)
+        return self
+
+
+class RoundRobinTournament:
+    """
+    Formato "todos contra todos": una única liga con TODAS las estrategias, sin
+    temporadas ni ascensos. Cada pareja juega un partido y gana quien más puntos suma.
+
+    Es el formato de los torneos de Axelrod. Sirve de referencia para responder:
+    ¿cambia el ganador según el formato? (en ligas, cada estrategia solo se mide con
+    las de su nivel; aquí, con todas).
+
+    Expone la misma interfaz que `League_Tournament` (`run(seed)`, `matches`,
+    `standings`, `rounds`) para que el resto del código no tenga que distinguirlos.
+    Convención: se guarda como temporada 0, liga 0 (la "liga de todos").
+    """
+
+    def __init__(self, members: Dict[str, Strategy], rounds: int, verbose: bool = False,
+                 payoff: Payoff = DEFAULT_PAYOFF, noise: float = 0.0,
+                 record_rounds: bool = False):
+        if len(members) < 2:
+            raise ValueError("Se necesitan al menos 2 estrategias.")
+        if not 0.0 <= noise <= 1.0:
+            raise ValueError(f"noise debe estar entre 0 y 1 (es {noise})")
+        self.members = dict(members)
+        self.league_rounds = rounds
+        self.verbose = verbose
+        self.rules = dict(payoff=payoff, noise=noise, record_rounds=record_rounds)
+        self.league: Optional[League] = None
+        self.matches: List[dict] = []
+        self.standings: List[dict] = []
+        self.rounds: List[dict] = []
+
+    def run(self, seed: int) -> "RoundRobinTournament":
+        """Juega la liga única. La semilla de la liga sale de la maestra (como en ligas)."""
+        rng = np.random.default_rng(seed)
+        self.league = League(number=0, members=self.members, rounds=self.league_rounds,
+                             n_ascend_descend=0, **self.rules)
+        self.league.play(season_seed=_new_seed(rng), season=0)
+        for m in self.league.matches:
+            self.matches.append({"season": 0, "league": 0, **m})
+        for row in self.league.result:
+            self.standings.append({"season": 0, "league": 0, **row})
+        for r in self.league.round_rows:
+            self.rounds.append({"season": 0, "league": 0, **r})
+        if self.verbose:
+            print("Todos contra todos — clasificación:")
+            for row in self.league.result:
+                print(f"  {row['position']:>2}. {row['name']} ({row['points']})")
         return self

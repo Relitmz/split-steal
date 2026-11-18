@@ -121,6 +121,9 @@ def _parse_payoff(text: str) -> dict:
 @app.command()
 def tournament(
     roster: str = typer.Option("full", help=ROSTER_HELP),
+    format: str = typer.Option("leagues", "--format", "-f",
+                               help="leagues (ligas con ascensos) | round_robin (todos contra "
+                                    "todos; ignora las opciones de ligas)"),
     n_leagues: int = typer.Option(6, help="Número de ligas"),
     n_per_league: int = typer.Option(6, help="Estrategias por liga"),
     rounds: int = typer.Option(100, help="Rondas por partido"),
@@ -137,7 +140,8 @@ def tournament(
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Mostrar ascensos y descensos"),
 ):
     """Juega un torneo y guarda sus resultados (config.json + CSV)."""
-    config = TournamentConfig(roster=roster, n_leagues=n_leagues, n_per_league=n_per_league,
+    config = TournamentConfig(roster=roster, format=format, n_leagues=n_leagues,
+                              n_per_league=n_per_league,
                               rounds=rounds, n_seasons=n_seasons, n_ascend_descend=k,
                               seed=seed, qualifying=qualifying, noise=noise,
                               payoff=_parse_payoff(payoff), save_rounds=save_rounds)
@@ -151,16 +155,14 @@ def tournament(
 
 @app.command()
 def stats(run_dir: Path = typer.Argument(..., help="Carpeta de un run")):
-    """Resumen por estrategia y clasificación de la última temporada."""
+    """Resumen por estrategia y clasificación final."""
     result = load_run(run_dir)
 
     typer.echo("Resumen de todos los partidos (incluida la clasificatoria):")
     typer.echo(summarize(result.matches).round(1).to_string(index=False))
 
-    st = result.standings
-    final = st[st["season"] == st["season"].max()]
-    typer.echo(f"\nClasificación de la temporada {st['season'].max()}:")
-    typer.echo(final[["league", "position", "name", "points"]].to_string(index=False))
+    typer.echo(f"\nClasificación final ({result.config.format}):")
+    typer.echo(result.final_ranking.to_string(index=False))
 
 
 @app.command()

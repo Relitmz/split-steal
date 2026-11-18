@@ -28,9 +28,13 @@ from typing import Dict, List, Optional, Union
 
 import pandas as pd
 
+from .analysis import final_ranking as compute_final_ranking
 from .analysis import strategy_stats as compute_strategy_stats
 from .register import build_roster
-from .simulator import League_Tournament, Payoff
+from .simulator import League_Tournament, Payoff, RoundRobinTournament
+
+# Formatos de torneo disponibles (TournamentConfig.format)
+FORMATS = ("leagues", "round_robin")
 
 
 @dataclass
@@ -40,6 +44,9 @@ class TournamentConfig:
     # Quién juega: un preset ("full", "clasicas"...) o una lista de estrategias,
     # p. ej. ["TitForTat", "ForgivingTitForTat(p=0.2)"]. Ver register.build_roster.
     roster: Union[str, List[str]] = "full"
+    # Formato: "leagues" (clasificatoria + ligas con ascensos/descensos) o
+    # "round_robin" (una sola liga con todas; ignora los 5 parámetros de ligas de abajo).
+    format: str = "leagues"
     n_leagues: int = 6
     n_per_league: int = 6
     rounds: int = 100             # rondas por partido
@@ -64,24 +71,34 @@ class TournamentResult:
     strategies: List[str] = field(default_factory=list)
     rounds: Optional[pd.DataFrame] = None   # solo con save_rounds=True
 
+    @property
+    def final_ranking(self) -> pd.DataFrame:
+        """Clasificación final 1..N, igual para cualquier formato (ver analysis.final_ranking)."""
+        return compute_final_ranking(self.standings)
+
 
 def run_tournament(config: TournamentConfig, verbose: bool = False) -> TournamentResult:
     """Construye el roster, juega el torneo y devuelve sus tablas de resultados."""
     members = build_roster(config.roster)   # instancias nuevas en cada torneo
+    rules = dict(payoff=Payoff(**config.payoff), noise=config.noise,
+                 record_rounds=config.save_rounds, verbose=verbose)
 
-    tournament = League_Tournament(
-        n_seasons=config.n_seasons,
-        n_leagues=config.n_leagues,
-        members=members,
-        rounds=config.rounds,
-        n_per_league=config.n_per_league,
-        n_ascend_descend=config.n_ascend_descend,
-        verbose=verbose,
-        payoff=Payoff(**config.payoff),
-        noise=config.noise,
-        record_rounds=config.save_rounds,
-    )
-    tournament.run(seed=config.seed, qualifying=config.qualifying)
+    if config.format == "leagues":
+        tournament = League_Tournament(
+            n_seasons=config.n_seasons,
+            n_leagues=config.n_leagues,
+            members=members,
+            rounds=config.rounds,
+            n_per_league=config.n_per_league,
+            n_ascend_descend=config.n_ascend_descend,
+            **rules,
+        )
+        tournament.run(seed=config.seed, qualifying=config.qualifying)
+    elif config.format == "round_robin":
+        tournament = RoundRobinTournament(members=members, rounds=config.rounds, **rules)
+        tournament.run(seed=config.seed)
+    else:
+        raise ValueError(f"Formato desconocido '{config.format}'. Opciones: {', '.join(FORMATS)}")
 
     matches = _tidy_matches(pd.DataFrame(tournament.matches))
     return TournamentResult(

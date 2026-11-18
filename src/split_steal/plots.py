@@ -67,6 +67,11 @@ def _subtitle(ax, text: str) -> None:
     ax.text(0, 1.01, text, transform=ax.transAxes, color=INK_2, fontsize=9, va="bottom")
 
 
+def _stage(result: TournamentResult) -> str:
+    """Nombre de la temporada 0 según el formato."""
+    return "Todos contra todos" if result.config.format == "round_robin" else "Clasificatoria"
+
+
 def _qualifying_table(result: TournamentResult) -> pd.DataFrame:
     """Por estrategia, en la temporada 0: puntos por ronda y % de rondas jugando SPLIT."""
     s = result.strategy_stats
@@ -143,7 +148,7 @@ def plot_qualifying_points(result: TournamentResult):
     ax.tick_params(axis="y", length=0)
     ax.spines["left"].set_visible(False)
     ax.set_xlabel("Puntos medios por ronda")
-    ax.set_title("Clasificatoria: rendimiento contra todas las estrategias", pad=22)
+    ax.set_title(f"{_stage(result)}: rendimiento contra todas las estrategias", pad=22)
     _subtitle(ax, f"Temporada 0 · cada estrategia juega {len(q) - 1} partidos de "
                   f"{result.config.rounds} rondas")
     fig.tight_layout()
@@ -173,7 +178,7 @@ def plot_cooperation_vs_payoff(result: TournamentResult):
     ax.set_xlabel("% de rondas jugando SPLIT (cooperar)")
     ax.set_ylabel("Puntos medios por ronda")
     ax.set_title("¿Cooperar más hace ganar más?", pad=22)
-    _subtitle(ax, "Clasificatoria (temporada 0), una estrategia por punto")
+    _subtitle(ax, f"{_stage(result)} (temporada 0), una estrategia por punto")
     fig.tight_layout()
     return fig
 
@@ -187,6 +192,8 @@ def plot_all(result: TournamentResult, out_dir) -> List[Path]:
         "qualifying_points.png": plot_qualifying_points,
         "cooperation_vs_payoff.png": plot_cooperation_vs_payoff,
     }
+    if result.config.format != "leagues":
+        figures.pop("leagues_by_season.png")   # sin ligas no hay nada que dibujar
     paths = []
     for filename, make in figures.items():
         fig = make(result)

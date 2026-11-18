@@ -108,3 +108,19 @@ def strategy_stats(matches: pd.DataFrame,
     first = keys + ["matches_played", "rounds_played", "times_split", "times_steal",
                     "score_split", "score_steal"]
     return s[first + [c for c in s.columns if c not in first]]
+
+
+def final_ranking(standings: pd.DataFrame) -> pd.DataFrame:
+    """
+    Clasificación final del torneo, de 1 (campeón) a N, sea cual sea el formato.
+
+    Se toma la ÚLTIMA temporada jugada y se ordena por liga y posición: primero toda
+    la Liga 1, luego la 2... En "todos contra todos" (una sola liga) es esa tabla.
+    Así se pueden comparar formatos y promediar posiciones entre semillas.
+
+    Columnas: rank, name, league, position, points.
+    """
+    last = standings[standings["season"] == standings["season"].max()]
+    ranked = last.sort_values(["league", "position"], ignore_index=True)
+    ranked.insert(0, "rank", range(1, len(ranked) + 1))
+    return ranked[["rank", "name", "league", "position", "points"]]
