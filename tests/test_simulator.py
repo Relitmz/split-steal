@@ -29,10 +29,10 @@ def test_payoff_is_prisoners_dilemma():
 
 
 def test_known_match_scores():
-    assert play_match(AlwaysSplit(), AlwaysSplit(), rounds=10) == (30, 30)
-    assert play_match(AlwaysSplit(), AlwaysSteal(), rounds=10) == (0, 50)
+    assert play_match(AlwaysSplit(), AlwaysSplit(), rounds=10).scores == (30, 30)
+    assert play_match(AlwaysSplit(), AlwaysSteal(), rounds=10).scores == (0, 50)
     # TitForTat coopera en la 1.ª ronda y luego roba siempre: 0 + 9·1 vs 5 + 9·1
-    assert play_match(TitForTat(), AlwaysSteal(), rounds=10) == (9, 14)
+    assert play_match(TitForTat(), AlwaysSteal(), rounds=10).scores == (9, 14)
 
 
 def test_match_is_deterministic_given_seed():
@@ -131,7 +131,7 @@ def test_save_and_load_roundtrip(tmp_path):
     pd.testing.assert_frame_equal(loaded.strategy_stats, result.strategy_stats)
 
 
-def test_strategy_stats_are_consistent():
+def test_strategy_stats_count_every_round():
     """Cada ronda jugada debe contarse exactamente una vez como SPLIT o STEAL."""
     result = run_tournament(TournamentConfig(n_seasons=2, rounds=10))
     s = result.strategy_stats

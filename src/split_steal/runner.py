@@ -9,9 +9,13 @@ la *persistencia* (archivos en disco):
 
 Cada ejecución se guarda en una carpeta `results/runs/<nombre>/` con:
   - config.json         parámetros + semilla + lista de estrategias (para poder repetirlo)
-  - matches.csv         un partido por fila: season, league, A, B, pa, pb, seed
+  - matches.csv         un partido por fila: season, league, A, B, puntos (pa, pb),
+                        recuento de rondas cc/cd/dc/dd, ruido, primera traición,
+                        represalias y ofertas de paz, seed (ver simulator.MatchResult)
   - standings.csv       clasificación por temporada y liga: season, league, position, name, points
-  - strategy_stats.csv  cómo jugó cada estrategia en cada liga (cuántos SPLIT/STEAL y sus puntos)
+  - strategy_stats.csv  cómo jugó cada estrategia en cada liga (calculado a partir de
+                        matches.csv con analysis.strategy_stats)
+  - rounds.csv.gz       OPCIONAL (save_rounds=True): cada jugada de cada ronda
 
 Convención: la temporada 0 es la clasificatoria (liga 0, con todas las estrategias).
 """
@@ -20,12 +24,13 @@ import json
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 import pandas as pd
 
+from .analysis import strategy_stats as compute_strategy_stats
 from .register import build_roster
-from .simulator import League_Tournament
+from .simulator import League_Tournament, Payoff
 
 
 @dataclass
@@ -42,6 +47,10 @@ class TournamentConfig:
     n_ascend_descend: int = 2     # k: cuántos suben y bajan por liga
     seed: int = 42                # semilla maestra
     qualifying: bool = True       # jugar la temporada 0 clasificatoria
+    # Matriz de pagos: R (ambos SPLIT), S (me traicionan), T (traiciono), P (ambos STEAL)
+    payoff: Dict[str, int] = field(default_factory=lambda: Payoff().as_dict())
+    noise: float = 0.0            # prob. de que una jugada se invierta (0 = sin ruido)
+    save_rounds: bool = False     # guardar también cada jugada (rounds.csv.gz)
 
 
 @dataclass
@@ -53,6 +62,7 @@ class TournamentResult:
     standings: pd.DataFrame
     strategy_stats: pd.DataFrame
     strategies: List[str] = field(default_factory=list)
+    rounds: Optional[pd.DataFrame] = None   # solo con save_rounds=True
 
 
 def run_tournament(config: TournamentConfig, verbose: bool = False) -> TournamentResult:
@@ -67,25 +77,28 @@ def run_tournament(config: TournamentConfig, verbose: bool = False) -> Tournamen
         n_per_league=config.n_per_league,
         n_ascend_descend=config.n_ascend_descend,
         verbose=verbose,
+        payoff=Payoff(**config.payoff),
+        noise=config.noise,
+        record_rounds=config.save_rounds,
     )
     tournament.run(seed=config.seed, qualifying=config.qualifying)
 
-    # Las estrategias guardan sus estadísticas por liga en `season_info`.
-    stats_rows = [
-        {"name": s.name, **asdict(ls)}
-        for s in members.values()
-        for ls in s.season_info
-    ]
-    strategy_stats = (pd.DataFrame(stats_rows)
-                      .sort_values(["season", "league", "name"], ignore_index=True))
-
+    matches = _tidy_matches(pd.DataFrame(tournament.matches))
     return TournamentResult(
         config=config,
-        matches=pd.DataFrame(tournament.matches),
+        matches=matches,
         standings=pd.DataFrame(tournament.standings),
-        strategy_stats=strategy_stats,
+        strategy_stats=compute_strategy_stats(matches, config.payoff),
         strategies=list(members),
+        rounds=pd.DataFrame(tournament.rounds) if config.save_rounds else None,
     )
+
+
+def _tidy_matches(matches: pd.DataFrame) -> pd.DataFrame:
+    """Tipos limpios: la ronda del primer robo es un entero que puede faltar (Int64)."""
+    for col in ("first_steal_a", "first_steal_b"):
+        matches[col] = matches[col].astype("Int64")
+    return matches
 
 
 def save_run(result: TournamentResult, out_dir: Union[str, Path] = "results/runs",
@@ -108,6 +121,11 @@ def save_run(result: TournamentResult, out_dir: Union[str, Path] = "results/runs
     # lineterminator fijo: así los CSV son idénticos en Windows y Linux.
     for table in ("matches", "standings", "strategy_stats"):
         getattr(result, table).to_csv(run_dir / f"{table}.csv", index=False, lineterminator="\n")
+    if result.rounds is not None:
+        # Comprimido (puede ser grande). mtime=0: el .gz no guarda la hora, y así
+        # el archivo sale idéntico byte a byte al repetir el mismo torneo.
+        result.rounds.to_csv(run_dir / "rounds.csv.gz", index=False, lineterminator="\n",
+                             compression={"method": "gzip", "mtime": 0})
     return run_dir
 
 
@@ -121,4 +139,6 @@ def load_run(run_dir: Union[str, Path]) -> TournamentResult:
         standings=pd.read_csv(run_dir / "standings.csv"),
         strategy_stats=pd.read_csv(run_dir / "strategy_stats.csv"),
         strategies=meta["strategies"],
+        rounds=(pd.read_csv(run_dir / "rounds.csv.gz")
+                if (run_dir / "rounds.csv.gz").exists() else None),
     )

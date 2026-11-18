@@ -52,7 +52,6 @@ para describirlas, agruparlas en presets y filtrar en los análisis.
 
 import inspect
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from typing import Dict, FrozenSet, List, Optional
 
 # Codificamos las acciones como enteros: así "cambiar de acción" es `1 - accion`
@@ -79,28 +78,17 @@ def _format_value(value) -> str:
     return f"{value:g}" if isinstance(value, float) else str(value)
 
 
-@dataclass
-class LeagueStats:
-    """Estadísticas de una estrategia durante UNA liga de UNA temporada."""
-
-    season: Optional[int] = None
-    league: Optional[int] = None
-    rounds_played: int = 0
-    times_split: int = 0
-    times_steal: int = 0
-    score_split: int = 0  # puntos obtenidos en rondas en las que jugó SPLIT
-    score_steal: int = 0  # puntos obtenidos en rondas en las que jugó STEAL
-
-
 class Strategy(ABC):
     """
     Clase base de todas las estrategias.
 
-    Además de la decisión (`act`), lleva la contabilidad de cómo juega:
-    - Totales acumulados en todo el torneo (`rounds_played`, `times_split`...).
-    - Estadísticas por liga: el simulador llama a `league_started(season, league)`
-      al empezar cada liga y a `league_finished()` al terminarla; cada liga jugada
-      queda guardada como un `LeagueStats` en `season_info`.
+    Una estrategia solo DECIDE (`act`). No lleva su propia contabilidad: el motor
+    (`simulator.play_match`) registra lo que pasa en cada partido y las
+    estadísticas por estrategia se calculan después a partir de esos datos
+    (`analysis.py`). Así hay una única fuente de verdad.
+
+    Si una estrategia necesita conocer los puntos que va obteniendo (p. ej.
+    `Adaptive`, que aprende de ellos), puede sobrescribir `observe`.
     """
 
     # Rasgos de la estrategia (claves de TAGS). Cada subclase define los suyos.
@@ -110,17 +98,6 @@ class Strategy(ABC):
         # El nombre identifica a la estrategia en registros, tablas y CSV: debe ser único.
         # Si no se da, se genera a partir de la clase y sus parámetros (ver `name`).
         self._name = name
-
-        # Totales de todo el torneo
-        self.rounds_played = 0
-        self.times_split = 0
-        self.times_steal = 0
-        self.score_split = 0
-        self.score_steal = 0
-
-        # Historial por liga: lista de LeagueStats (una entrada por liga jugada)
-        self.season_info: List[LeagueStats] = []
-        self.actual_league = LeagueStats()
 
     # ------------------------------------------------------------------ identidad
     @classmethod
@@ -156,32 +133,15 @@ class Strategy(ABC):
         """
         Borra el estado propio de un partido. El simulador lo llama ANTES de cada
         partido. Por defecto no hace nada; las estrategias con memoria interna lo
-        sobrescriben. (No toca las estadísticas: esas sí deben acumularse.)
+        sobrescriben.
         """
 
-    def league_started(self, season: int, league: int) -> None:
-        """Llamar al iniciar una liga: abre un nuevo bloque de estadísticas."""
-        self.actual_league = LeagueStats(season=season, league=league)
-
-    def update_stats(self, action: int, points: int) -> None:
-        """Llamar tras cada ronda con la acción jugada y los puntos obtenidos."""
-        self.rounds_played += 1
-        self.actual_league.rounds_played += 1
-        if action == SPLIT:
-            self.times_split += 1
-            self.score_split += points
-            self.actual_league.times_split += 1
-            self.actual_league.score_split += points
-        else:
-            self.times_steal += 1
-            self.score_steal += points
-            self.actual_league.times_steal += 1
-            self.actual_league.score_steal += points
-
-    def league_finished(self) -> None:
-        """Llamar al terminar una liga: guarda sus estadísticas y empieza un bloque vacío."""
-        self.season_info.append(self.actual_league)
-        self.actual_league = LeagueStats()
+    def observe(self, action: int, points: int) -> None:
+        """
+        El simulador lo llama tras cada ronda con la jugada que REALMENTE se hizo
+        (con ruido puede no ser la elegida) y los puntos obtenidos. Por defecto no
+        hace nada; lo usan las estrategias que aprenden de sus resultados.
+        """
 
     # ------------------------------------------------------------------ decisión
     @abstractmethod
@@ -258,8 +218,15 @@ class GrimTrigger(Strategy):
 
 class WinStayLoseShift(Strategy):
     """
-    Pavlov: empieza con SPLIT. Si en la ronda anterior ambos hicieron lo mismo
-    (S/S o St/St) repite su acción; si fueron distintas, cambia.
+    Pavlov (Nowak y Sigmund, 1993): "si gané, repito; si perdí, cambio". Empieza
+    con SPLIT. Ganar = obtener R o T (el rival cooperó); perder = S o P (el rival robó).
+
+    Equivale a: SPLIT si en la ronda anterior ambos hicieron lo mismo (S/S o St/St)
+    y STEAL si hicieron cosas distintas. Por eso, tras una traición mutua ofrece la
+    paz, y si explota a un ingenuo sigue explotándolo.
+
+    (Una versión anterior "repetía si coincidían y cambiaba si no", lo que en la
+    práctica es copiar al rival: era TitForTat con otro nombre. Lo detectaron los tests.)
     """
     tags = frozenset({"amable", "vengativa", "perdona", "clasica"})
 
@@ -269,10 +236,8 @@ class WinStayLoseShift(Strategy):
     def act(self, h_self, h_opp, rng):
         if not h_self:
             return SPLIT
-        last_self, last_opp = h_self[-1], h_opp[-1]
-        if last_self == last_opp:
-            return last_self       # repetir
-        return 1 - last_self       # cambiar
+        won = h_opp[-1] == SPLIT                 # obtuve R o T
+        return h_self[-1] if won else 1 - h_self[-1]   # gané: repito / perdí: cambio
 
 
 class TwoTitsForTat(Strategy):
@@ -755,8 +720,7 @@ class Adaptive(Strategy):
     def reset(self):
         self._reset_scores()
 
-    def update_stats(self, action: int, points: int) -> None:
-        super().update_stats(action, points)   # mantener la contabilidad general
+    def observe(self, action: int, points: int) -> None:
         self.match_score[action] += points
         self.match_count[action] += 1
 

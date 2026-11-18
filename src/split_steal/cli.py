@@ -30,6 +30,7 @@ for _stream in (sys.stdout, sys.stderr):
 
 from .register import CATALOG, PRESETS, build_roster
 from .runner import TournamentConfig, load_run, run_tournament, save_run
+from .simulator import Payoff
 
 app = typer.Typer(help="Torneos de estrategias Split/Steal con ligas, ascensos y descensos.",
                   no_args_is_help=True)
@@ -102,6 +103,21 @@ def list_strategies(roster: str = typer.Argument("full", help=ROSTER_HELP)):
         typer.echo(f"  {'':<24} {strategy.description()}")
 
 
+def _parse_payoff(text: str) -> dict:
+    """'R=3,S=0,T=5,P=1' -> {'R': 3, 'S': 0, 'T': 5, 'P': 1} (las que falten, por defecto)."""
+    values = Payoff().as_dict()
+    for part in filter(None, (p.strip() for p in text.split(","))):
+        key, _, value = part.partition("=")
+        key = key.strip().upper()
+        if key not in values:
+            raise typer.BadParameter(f"pago desconocido '{key}': usa R, S, T y P")
+        try:
+            values[key] = int(value)
+        except ValueError:
+            raise typer.BadParameter(f"el pago {key} debe ser un entero ('{value.strip()}')")
+    return values
+
+
 @app.command()
 def tournament(
     roster: str = typer.Option("full", help=ROSTER_HELP),
@@ -112,6 +128,10 @@ def tournament(
     k: int = typer.Option(2, help="Cuántas estrategias suben y bajan por liga"),
     seed: int = typer.Option(42, help="Semilla maestra"),
     qualifying: bool = typer.Option(True, help="Jugar temporada 0 clasificatoria"),
+    noise: float = typer.Option(0.0, help="Probabilidad de que una jugada se invierta (0 = sin ruido)"),
+    payoff: str = typer.Option("R=3,S=0,T=5,P=1",
+                               help="Pagos: R ambos SPLIT, S me traicionan, T traiciono, P ambos STEAL"),
+    save_rounds: bool = typer.Option(False, help="Guardar también cada jugada (rounds.csv.gz)"),
     out_dir: Path = typer.Option(Path("results/runs"), help="Carpeta donde guardar"),
     name: str = typer.Option(None, help="Nombre de la carpeta del run (por defecto, fecha y hora)"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Mostrar ascensos y descensos"),
@@ -119,7 +139,8 @@ def tournament(
     """Juega un torneo y guarda sus resultados (config.json + CSV)."""
     config = TournamentConfig(roster=roster, n_leagues=n_leagues, n_per_league=n_per_league,
                               rounds=rounds, n_seasons=n_seasons, n_ascend_descend=k,
-                              seed=seed, qualifying=qualifying)
+                              seed=seed, qualifying=qualifying, noise=noise,
+                              payoff=_parse_payoff(payoff), save_rounds=save_rounds)
     try:
         result = run_tournament(config, verbose=verbose)
     except ValueError as e:

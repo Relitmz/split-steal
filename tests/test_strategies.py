@@ -11,7 +11,7 @@ from split_steal.simulator import play_match
 from split_steal.strategies import (SPLIT, STEAL, TAGS, Adaptive, AlwaysSplit, AlwaysSteal,
                                     Extortioner, ForgivingTitForTat, GenerousTitForTat,
                                     Gradual, HardMajority, Joss, Mirror2Rounds, Prober, Strategy,
-                                    SuspiciousTitForTat, TitForTat)
+                                    SuspiciousTitForTat, TitForTat, WinStayLoseShift)
 
 
 class Scripted(Strategy):
@@ -82,6 +82,34 @@ def test_forgiving_extremes():
     assert set(moves_of(ForgivingTitForTat(p=1), AlwaysSteal(), rounds=10)) == {SPLIT}
 
 
+def test_wsls_is_pavlov_not_tit_for_tat():
+    # Tras St/St (perdió) cambia a SPLIT; tras S/St (perdió) cambia a STEAL.
+    assert moves_of(WinStayLoseShift(), AlwaysSteal(), rounds=6) == [0, 1, 0, 1, 0, 1]
+    # Si explota a un ingenuo (ganó con T) sigue robando.
+    opp = Scripted([STEAL] + [SPLIT] * 5)
+    assert moves_of(WinStayLoseShift(), opp, rounds=5) == [0, 1, 1, 1, 1]
+    assert (moves_of(WinStayLoseShift(), AlwaysSteal(), rounds=10)
+            != moves_of(TitForTat(), AlwaysSteal(), rounds=10))
+
+
+def test_no_two_official_strategies_play_identically():
+    """Detector de duplicados: dos estrategias del roster no pueden jugar igual
+    contra todos los rivales (pasó con RevengeOneRound y con WinStayLoseShift)."""
+    from split_steal.register import Registry
+    reg = Registry()
+    rivals = list(Registry().values()) + [Scripted([STEAL, SPLIT, SPLIT, STEAL, STEAL, SPLIT])]
+    fingerprints = {}
+    for name, s in reg.items():
+        # instancia nueva por rival (moves_of envuelve `act` de la instancia que recibe)
+        # varias semillas: una aleatoria puede coincidir por casualidad con una fija
+        fingerprints[name] = tuple(tuple(moves_of(type(s)(**s.params), r, rounds=30, seed=seed))
+                                   for r in rivals for seed in (1, 2, 3))
+    seen = {}
+    for name, fp in fingerprints.items():
+        assert fp not in seen, f"{name} juega igual que {seen.get(fp)}"
+        seen[fp] = name
+
+
 def test_suspicious_tft_vs_tft_alternates():
     assert moves_of(SuspiciousTitForTat(), TitForTat(), rounds=6) == [1, 0, 1, 0, 1, 0]
 
@@ -137,7 +165,7 @@ def test_extortioner_enforces_two_to_one_surplus(opponent):
     """(Extortioner no está en el roster oficial, pero se puede usar en experimentos.)
     Propiedad Zero-Determinant: (mis puntos - 1) ≈ 2 · (puntos del rival - 1) por ronda."""
     rounds = 50_000
-    pe, po = play_match(Extortioner(), opponent(), rounds=rounds, seed=11)
+    pe, po = play_match(Extortioner(), opponent(), rounds=rounds, seed=11).scores
     surplus_e, surplus_o = pe / rounds - 1, po / rounds - 1
     assert surplus_e == pytest.approx(2 * surplus_o, abs=0.05)
     assert pe >= po
