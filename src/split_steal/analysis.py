@@ -173,3 +173,29 @@ def summarize_seeds(final_rankings: pd.DataFrame, standings: pd.DataFrame,
 
     summary = summary.reset_index().sort_values(["rank_mean", "name"], ignore_index=True)
     return summary
+
+
+def head_to_head(matches: pd.DataFrame, value: str = "diff") -> pd.DataFrame:
+    """
+    Matriz N×N de enfrentamientos directos: fila = estrategia, columna = rival.
+
+    value:
+      "diff"   -> (mis puntos - los del rival) por ronda: > 0 la fila "gana" a la columna.
+      "points" -> mis puntos por ronda contra ese rival.
+
+    Se promedian TODOS los partidos entre cada pareja (todas las temporadas y, si la
+    tabla tiene columna `seed`, todas las semillas). Las parejas que nunca se
+    enfrentaron (p. ej. en ligas distintas) quedan como NaN. Filas y columnas van en
+    el mismo orden: de la que más gana de media a la que menos.
+    """
+    if value not in ("diff", "points"):
+        raise ValueError("value debe ser 'diff' o 'points'")
+    view = perspective(matches)
+    view["rounds"] = view[["mutual_split", "betrayed", "stole", "mutual_steal"]].sum(axis=1)
+    g = view.groupby(["name", "opponent"])[["points", "points_against", "rounds"]].sum()
+    num = g["points"] - g["points_against"] if value == "diff" else g["points"]
+    table = (num / g["rounds"]).unstack("opponent")
+    names = sorted(set(table.index) | set(table.columns))
+    table = table.reindex(index=names, columns=names)
+    order = table.mean(axis=1).sort_values(ascending=False).index
+    return table.loc[order, order]

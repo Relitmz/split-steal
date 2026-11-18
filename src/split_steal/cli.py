@@ -262,11 +262,31 @@ def stats(run_dir: Path = typer.Argument(..., help="Carpeta de un run")):
 
 
 @app.command()
-def plot(run_dir: Path = typer.Argument(..., help="Carpeta de un run")):
-    """Genera las gráficas del run en <run_dir>/figs/."""
-    from .plots import plot_all  # import diferido: matplotlib solo cuando hace falta
+def plot(
+    run_dir: Path = typer.Argument(..., help="Carpeta de un torneo, de varias semillas o de un experimento"),
+    metric: List[str] = typer.Option(["rank_mean", "title_rate"],
+                                     help="Experimentos: métricas a dibujar (se puede repetir)"),
+    strategies: str = typer.Option(None, help="Experimentos: estrategias a dibujar (por comas, máx. 8 en líneas)"),
+):
+    """Genera las gráficas en <carpeta>/figs/ (detecta el tipo de carpeta)."""
+    # import diferido: matplotlib solo se carga cuando hace falta
+    from .plots import _save, plot_all, plot_experiment, plot_head_to_head
 
-    for path in plot_all(load_run(run_dir), Path(run_dir) / "figs"):
+    run_dir = Path(run_dir)
+    names = [s.strip() for s in strategies.split(",")] if strategies else None
+    try:
+        if (run_dir / "experiment.toml").exists():
+            paths = plot_experiment(run_dir, metrics=metric, strategies=names)
+        elif (run_dir / "summary.csv").exists():                 # varias semillas
+            multi = load_multi(run_dir)
+            (run_dir / "figs").mkdir(exist_ok=True)
+            fig = plot_head_to_head(multi.matches, title_note=f"{len(multi.seeds)} semillas")
+            paths = [_save(fig, run_dir / "figs" / "head_to_head.png")]
+        else:
+            paths = plot_all(load_run(run_dir), run_dir / "figs")
+    except (ValueError, OSError) as e:
+        raise typer.BadParameter(str(e))
+    for path in paths:
         typer.echo(f"  {path}")
 
 
