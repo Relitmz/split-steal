@@ -10,3 +10,6 @@ CLAUDE.local.md
 results/experiments/*/variants/
 results/experiments/*/figs/head_to_head__*
 results/index.csv
+
+# Instrucciones locales para Claude Code (no se publican)
+CLAUDE.md
