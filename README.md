@@ -9,8 +9,8 @@ torneos configurables: ligas con ascensos y descensos o todos contra todos, con 
 > traicionar o algo intermedio? ¿Y cambia la respuesta si hay errores, si traicionar
 > tienta más o si cambia el formato de la competición?
 
-📄 **[Informe completo (Word)](docs/informe/Informe_SplitSteal.docx)**: el proyecto explicado de forma
-sencilla, con todos los resultados, gráficas y lo que dicen sobre la vida real.
+📄 **Informe completo: [PDF](docs/informe/Informe_SplitSteal.pdf) · [Word](docs/informe/Informe_SplitSteal.docx)**:
+el proyecto explicado de forma sencilla, con todos los resultados, gráficas y lo que dicen sobre la vida real.
 
 ![Quién gana a quién](results/canonical/figs/head_to_head.png)
 

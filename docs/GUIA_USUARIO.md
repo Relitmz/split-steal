@@ -394,4 +394,5 @@ cd .. && python docs/informe/build_informe.py                                   
 ```
 
 El primero escribe `docs/informe/figs/*.png` y `docs/informe/cifras.json`; el segundo lee
-ambos (necesita `python-docx`). Al abrir el Word, actualiza el índice si Word lo pide.
+ambos (necesita `python-docx`). Al abrir el Word, actualiza el índice si Word lo pide, y guárdalo
+como PDF (`docs/informe/Informe_SplitSteal.pdf`) para que se pueda leer directamente en GitHub.

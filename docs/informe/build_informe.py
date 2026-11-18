@@ -151,8 +151,9 @@ class Informe:
         run.font.color.rgb = INK_2
 
     # ---------------------------------------------------------------- bloques
-    def h1(self, text, tag=None):
-        self.doc.add_heading(text, level=1)
+    def h1(self, text, tag=None, new_page=False):
+        h = self.doc.add_heading(text, level=1)
+        h.paragraph_format.page_break_before = new_page
         if tag:
             self.tag(tag)
 
@@ -232,7 +233,7 @@ class Informe:
         cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
         add_runs(cap, f"**Figura {self.fig_n}.** {caption}", size=9, color=INK_2)
 
-    def table(self, header, rows, widths):
+    def table(self, header, rows, widths, spacer=True):
         t = self.doc.add_table(rows=1 + len(rows), cols=len(header))
         t.alignment = WD_TABLE_ALIGNMENT.CENTER
         for j, h in enumerate(header):
@@ -252,7 +253,8 @@ class Informe:
         for j, w in enumerate(widths):
             for row in t.rows:
                 row.cells[j].width = Cm(w)
-        self.doc.add_paragraph().paragraph_format.space_after = Pt(2)
+        if spacer:
+            self.doc.add_paragraph().paragraph_format.space_after = Pt(2)
 
     def cards(self, names, accent):
         """Fichas de personajes: dos por fila, [imagen | nombre, apodo y cómo juega]."""
@@ -492,7 +494,7 @@ def build():
     R.p(f"Cada estrategia tiene rasgos. Hay **{C['n_amables']} amables** (nunca traicionan primero) y "
         f"**{C['n_traicioneras']} traicioneras** (pueden traicionar sin motivo); el resto usan el azar sin "
         "llegar a ninguno de los dos extremos. Aquí las tienes a todas, cada una con su apodo y su "
-        "forma de jugar:")
+        "forma de jugar. ¡Mira unas cuantas si tienes curiosidad!")
     R.h3("Las amables")
     R.cards(group_names("amable"), BLUE)
     R.h3("Las que dependen del azar")
@@ -500,7 +502,7 @@ def build():
     R.h3("Las traicioneras")
     R.cards(group_names("traicionera"), ORANGE)
     R.p("Y en un solo vistazo, los rasgos de todas:", keep_with_next=True)
-    R.fig("f01_personalidades", "Los rasgos de cada una de las 36 estrategias del roster oficial.", width=12.5)
+    R.fig("f01_personalidades", "Los rasgos de cada una de las 36 estrategias del roster oficial.", width=9.94)
 
     # ------------------------------------------------------------------ 4
     R.h1("4. ¿Quién gana?", "ligera")
@@ -520,7 +522,7 @@ def build():
                                 "(un torneo, semilla 42). 1 = la mejor liga.", width=13)
 
     # ------------------------------------------------------------------ 5
-    R.h1("5. ¿Ganar cada partido es ganar el torneo?", "ligera")
+    R.h1("5. ¿Ganar cada partido es ganar el torneo?", "ligera", new_page=True)
     h2h = C["alwayssteal_h2h"]
     R.p(f"Esta es la paradoja más bonita del juego. **AlwaysSteal**, que traiciona siempre, **no pierde "
         f"nunca** un enfrentamiento: contra {h2h['gana']} rivales gana, contra {h2h['empata']} empata y "
@@ -543,7 +545,7 @@ def build():
                 "cada trato acaba sin socios. El que busca acuerdos donde ganan los dos, acumula.")
 
     # ------------------------------------------------------------------ 6
-    R.h1("6. ¿Qué tienen en común las ganadoras? Las 4 cualidades", "ligera")
+    R.h1("6. ¿Qué tienen en común las ganadoras? Las 4 cualidades", "ligera", new_page=True)
     q = C["cualidades"]
     R.p("Axelrod resumió el secreto de las estrategias ganadoras en cuatro cualidades. Con nuestros datos "
         "las podemos **medir**:")
@@ -564,7 +566,7 @@ def build():
                 "aparecen en muchas culturas. Y nadie la ha diseñado: sale sola de las reglas del juego.")
 
     # ------------------------------------------------------------------ 7
-    R.h1("7. ¿Depende de con quién te juntes?", "ligera")
+    R.h1("7. ¿Depende de con quién te juntes?", "ligera", new_page=True)
     R.p("Hasta ahora todas jugaban contra todas. Pero ¿y si cambiamos el **entorno**? Tomamos 8 estrategias "
         "de referencia y las metemos en tres mundos: uno **amable** (rodeadas de estrategias que nunca "
         "traicionan primero), uno **mixto** (las 36) y uno **hostil** (rodeadas de traicioneras).")
@@ -590,7 +592,7 @@ def build():
                 "la mejor?», pregúntate «¿con quién estoy jugando?». Y si puedes elegir tu entorno, elígelo bien.")
 
     # ------------------------------------------------------------------ 8
-    R.h1("8. ¿Qué pasa cuando hay malentendidos?", "ligera")
+    R.h1("8. ¿Qué pasa cuando hay malentendidos?", "ligera", new_page=True)
     R.p("En la vida real hay errores: un mensaje que se malinterpreta, un despiste, alguien que quería "
         "ayudar y no pudo. En 1983 el sistema de alerta soviético confundió reflejos del sol en las nubes con "
         "misiles estadounidenses; un oficial, Stanislav Petrov, decidió que era un error. Para simularlo, "
@@ -616,7 +618,7 @@ def build():
                 "dé un paso atrás.")
 
     # ------------------------------------------------------------------ 9
-    R.h1("9. ¿Cuándo conviene perdonar? ¿Cuánto?", "ligera")
+    R.h1("9. ¿Cuándo conviene perdonar? ¿Cuánto?", "ligera", new_page=True)
     R.p("Si los errores provocan cadenas de venganza, la solución parece ser perdonar. Pero ¿cuánto? Si "
         "perdonas demasiado, te explotan. Probamos una versión de TitForTat que perdona cada traición con una "
         "probabilidad **p**: desde 0 (nunca perdona, es TitForTat) hasta 1 (siempre perdona, es AlwaysSplit). "
@@ -663,7 +665,7 @@ def build():
                 "hacemos con los amigos de verdad: un mal día no borra años de confianza.")
 
     # ------------------------------------------------------------------ 11
-    R.h1("11. ¿Liga o todos contra todos?", "ligera")
+    R.h1("11. ¿Liga o todos contra todos?", "ligera", new_page=True)
     R.p("¿Importa cómo se organiza la competición? Mucho. Comparamos el formato de ligas con ascensos y "
         "descensos con un todos contra todos de toda la vida.")
     fm, fd = C["formatos_max_titulos"], C["formatos_campeones_distintos"]
@@ -694,7 +696,7 @@ def build():
                 "el aprovechado prospera donde hay ingenuos, pero choca con un techo donde la gente sabe defenderse.")
 
     # ------------------------------------------------------------------ 12
-    R.h1("12. ¿Y si traicionar tienta más?", "ligera")
+    R.h1("12. ¿Y si traicionar tienta más?", "ligera", new_page=True)
     R.p("Hasta ahora, traicionar a quien coopera daba 5 puntos. ¿Qué pasa si da 4, 6 u 8? Es como subir o bajar "
         "la tentación.")
     tt = C["tentacion"]
@@ -801,7 +803,7 @@ def build():
         ["Evolución (sección 13)", 'split-steal evolve --initial "AlwaysSteal=0.98,TitForTat=0.02"'],
         ["Gráficas y cifras del informe", "ejecutar notebooks/03_informe.ipynb"],
         ["Este documento", "python docs/informe/build_informe.py"],
-    ], widths=[5.0, 11.4])
+    ], widths=[5.0, 11.4], spacer=False)
 
     R.h1("Referencias")
     R.bullets([
