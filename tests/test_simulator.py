@@ -81,13 +81,6 @@ def test_league_round_robin_and_ordering():
     assert dict(league.clasification)["AlwaysSteal"] == 64
 
 
-def test_ties_broken_alphabetically():
-    members = {s.name: s for s in [TitForTat(), AlwaysSplit()]}   # empatan siempre
-    league = League(1, members, rounds=5, n_ascend_descend=1)
-    league.play(season_seed=0)
-    assert [n for n, _ in league.clasification] == ["AlwaysSplit", "TitForTat"]
-
-
 # ------------------------------------------------------------------ torneo
 def test_tournament_validates_sizes():
     with pytest.raises(ValueError):

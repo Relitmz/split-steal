@@ -232,6 +232,69 @@ def play_match(strategy_a: Strategy, strategy_b: Strategy,
     return m
 
 
+# =============================================================================
+# Clasificación y desempate
+# =============================================================================
+
+TIEBREAKERS = ("points", "head_to_head", "point_diff", "draw")
+
+
+def rank_league(matches: List[dict], lots: Dict[str, float]) -> List[dict]:
+    """
+    Ordena una liga a partir de sus partidos. Criterios, en este orden:
+
+      1. points        más puntos en la liga.
+      2. head_to_head  entre las empatadas a puntos: más puntos en los partidos
+                       que jugaron ENTRE ELLAS (una "mini-liga" de las empatadas).
+      3. point_diff    diferencia de puntos en toda la liga (a favor - en contra):
+                       premia a quien gana más de lo que deja ganar.
+      4. draw          sorteo (`lots`: un número aleatorio por estrategia; el
+                       menor queda delante). Reproducible porque sale de la semilla.
+
+    Simplificación: el enfrentamiento directo se calcula una vez sobre todo el grupo
+    empatado a puntos (no se repite para los subgrupos que sigan empatados).
+
+    Devuelve una fila por estrategia con: name, points, position, point_diff,
+    tied (cuántas empataban a puntos con ella, incluida ella; 1 = nadie) y
+    decided_by (qué criterio la separó de la SIGUIENTE en la tabla; "-" en la
+    última). Con decided_by se puede contar, p. ej., cuántos descensos decidió el sorteo.
+    """
+    points: Dict[str, int] = {n: 0 for n in lots}
+    against: Dict[str, int] = {n: 0 for n in lots}
+    for m in matches:
+        points[m["A"]] += m["pa"]
+        points[m["B"]] += m["pb"]
+        against[m["A"]] += m["pb"]
+        against[m["B"]] += m["pa"]
+
+    # Grupos de empatadas a puntos y, dentro de cada grupo, sus puntos entre ellas.
+    groups: Dict[int, set] = {}
+    for n, p in points.items():
+        groups.setdefault(p, set()).add(n)
+    h2h: Dict[str, int] = {n: 0 for n in points}
+    for m in matches:
+        a, b = m["A"], m["B"]
+        if points[a] == points[b]:          # ambas en el mismo grupo de empate
+            h2h[a] += m["pa"]
+            h2h[b] += m["pb"]
+
+    def key(n: str) -> Tuple[int, int, int, float]:
+        # Tupla en el orden de TIEBREAKERS (negativos = "más es mejor").
+        return (-points[n], -h2h[n], -(points[n] - against[n]), lots[n])
+
+    order = sorted(points, key=key)
+    rows = []
+    for i, n in enumerate(order):
+        decided_by = "-"           # la última no tiene a nadie debajo
+        if i + 1 < len(order):
+            mine, nxt = key(n), key(order[i + 1])
+            decided_by = next(c for c, x, y in zip(TIEBREAKERS, mine, nxt) if x != y)
+        rows.append({"name": n, "points": points[n], "position": i + 1,
+                     "point_diff": points[n] - against[n], "tied": len(groups[points[n]]),
+                     "decided_by": decided_by})
+    return rows
+
+
 class League:
     """
     Una liga: todos contra todos, una sola vuelta (cada pareja juega un partido).
@@ -283,11 +346,15 @@ class League:
                     {"A": a, "B": b, "round": r, "a": ma, "b": mb, "flip_a": fa, "flip_b": fb}
                     for r, ma, mb, fa, fb in m.rounds)
 
-        # Orden: más puntos primero; en empate, orden alfabético (desempate
-        # determinista, para que la clasificación sea reproducible).
-        self.clasification = sorted(points.items(), key=lambda kv: (-kv[1], kv[0]))
-        self.result = [{"name": n, "points": p, "position": i + 1}
-                       for i, (n, p) in enumerate(self.clasification)]
+        # Sorteo para el último criterio de desempate. Se hace DESPUÉS de los
+        # partidos con el mismo generador de la liga: es reproducible y no altera
+        # las semillas de los partidos. Se sortea en orden alfabético para que el
+        # resultado no dependa del orden en que llegaron los miembros.
+        names = sorted(self.members)
+        lots = dict(zip(names, rng.random(len(names))))
+
+        self.result = rank_league(self.matches, lots)
+        self.clasification = [(row["name"], row["points"]) for row in self.result]
         return self.result
 
     # ---------------------------------------------- ascensos y descensos
