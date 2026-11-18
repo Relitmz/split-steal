@@ -92,11 +92,6 @@ def _new_seed(rng: np.random.Generator) -> int:
     return int(rng.integers(0, _MAX_SEED))
 
 
-def play_round(a: int, b: int, payoff: Payoff = DEFAULT_PAYOFF) -> Tuple[int, int]:
-    """Puntos de una ronda dadas las acciones de A y B."""
-    return payoff.matrix()[(a, b)]
-
-
 # =============================================================================
 # Un partido
 # =============================================================================

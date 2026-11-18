@@ -226,7 +226,7 @@ usan las mismas semillas, así que sus diferencias no se deben a "otra suerte".
 
 ```
 results/
-  canonical/canonical/      el torneo de referencia (versionado en git)
+  canonical/                el torneo de referencia (versionado en git)
   runs/<nombre>/            torneos sueltos de `tournament` (solo en tu equipo)
   experiments/<nombre>/     experimentos (en git solo los resúmenes y las gráficas)
   index.csv                 catálogo de todo lo simulado (solo en tu equipo)
@@ -307,7 +307,7 @@ s[s.strategy == "TitForTat"][["noise", "rank_mean", "rank_ci95", "title_rate"]]
 
 compare(["results/experiments/ruido"], metric="coop_rate")
 
-run = load_run("results/canonical/canonical")
+run = load_run("results/canonical")
 head_to_head(run.matches)                  # matriz N×N
 plots.plot_sweep(s, x="noise", strategies=["TitForTat", "MimicMajority"])
 ```
@@ -321,7 +321,7 @@ un torneo paso a paso y `02_experimentos` presenta los experimentos. Se ejecutan
 | Pregunta | Cómo |
 |---|---|
 | ¿Qué estrategias hay y qué hacen? | `split-steal catalog` |
-| ¿Quién gana el torneo de referencia? | `split-steal stats results/canonical/canonical` |
+| ¿Quién gana el torneo de referencia? | `split-steal stats results/canonical` |
 | ¿El ganador lo es por suerte? | `split-steal tournament --seeds 50 --name s50` y mira `rank_ci95` y `title_rate` |
 | ¿Qué pasa con errores? | `split-steal experiment experiments/ruido.toml` |
 | ¿Mi estrategia nueva es buena? | añádela a `strategies.py` y `split-steal tournament --format round_robin --roster "full, MiEstrategia" --seeds 50 --name mia` |

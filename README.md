@@ -9,7 +9,7 @@ torneos configurables: ligas con ascensos y descensos o todos contra todos, con 
 > traicionar o algo intermedio? ¿Y cambia la respuesta si hay errores, si traicionar
 > tienta más o si cambia el formato de la competición?
 
-![Quién gana a quién](results/canonical/canonical/figs/head_to_head.png)
+![Quién gana a quién](results/canonical/figs/head_to_head.png)
 
 ## El juego
 
@@ -110,13 +110,13 @@ explica todas las opciones: selección de estrategias, ajustes, archivos de expe
 qué contiene cada archivo de resultados y cómo analizarlos.
 
 El run canónico (un torneo de referencia: 36 estrategias, 6 ligas × 6, 20 temporadas, sin
-ruido, semilla 42) está en `results/canonical/canonical/` y se explica paso a paso en
+ruido, semilla 42) está en `results/canonical/` y se explica paso a paso en
 [`notebooks/01_torneo_canonico.ipynb`](notebooks/01_torneo_canonico.ipynb). Se regenera
 idéntico byte a byte:
 
 ```bash
-split-steal tournament --name canonical --out-dir results/canonical
-split-steal plot results/canonical/canonical
+split-steal tournament --name canonical --out-dir results
+split-steal plot results/canonical
 git status   # sin cambios
 ```
 

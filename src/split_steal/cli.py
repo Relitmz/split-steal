@@ -32,8 +32,8 @@ for _stream in (sys.stdout, sys.stderr):
         _stream.reconfigure(errors="replace")
 
 from .register import CATALOG, PRESETS, build_roster
-from .experiment import (Variant, variant_row, compare, load_experiment, run_experiment,
-                         save_experiment, update_index)
+from .experiment import (Variant, compare, index_path_for, load_experiment, run_experiment,
+                         save_experiment, update_index, variant_row)
 from .multiseed import load_multi, run_seeds, save_multi
 from .runner import TournamentConfig, load_run, run_tournament, save_run
 from .simulator import Payoff
@@ -166,7 +166,7 @@ def tournament(
     except ValueError as e:
         raise typer.BadParameter(str(e))
     row = variant_row(Variant(name=name, config=config), seeds)
-    update_index(Path(out_dir).parent / "index.csv", f"tournament/{name}",
+    update_index(index_path_for(out_dir), f"tournament/{name}",
                  [{**row, "path": Path(run_dir).as_posix()}])
     typer.echo(f"Resultados guardados en: {run_dir}")
 

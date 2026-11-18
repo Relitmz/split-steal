@@ -273,7 +273,7 @@ def save_experiment(result: ExperimentResult, out_dir: Union[str, Path] = "resul
     for v in result.variants:
         save_multi(result.results[v.name], exp_dir / "variants", v.name)
     if index:
-        update_index(Path(out_dir).parent / "index.csv", exp.name, [
+        update_index(index_path_for(out_dir), exp.name, [
             {**row, "path": (exp_dir / "variants" / row["variant"]).as_posix()} for row in rows])
     return exp_dir
 
@@ -286,6 +286,19 @@ def load_summary(exp_dir: Union[str, Path]) -> pd.DataFrame:
 # =============================================================================
 # Catálogo y comparación
 # =============================================================================
+
+def index_path_for(out_dir: Union[str, Path]) -> Path:
+    """
+    Dónde va el catálogo: en la carpeta `results` que contiene a `out_dir` (o que es
+    `out_dir`), así `results/runs`, `results/experiments` y `results` comparten
+    `results/index.csv`. Si no hay ninguna `results` por encima, junto a `out_dir`.
+    """
+    out_dir = Path(out_dir)
+    for folder in [out_dir, *out_dir.parents]:
+        if folder.name == "results":
+            return folder / "index.csv"
+    return out_dir.parent / "index.csv"
+
 
 def update_index(index_path: Union[str, Path], experiment: str, rows: List[Dict[str, Any]]) -> Path:
     """
