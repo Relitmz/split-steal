@@ -23,13 +23,16 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt, RGBColor
 
+from personajes import CHARACTERS          # docs/informe/personajes.py (mismo directorio)
+from split_steal.register import CATALOG, PRESETS
+
 HERE = Path(__file__).resolve().parent
 FIGS = HERE / "figs"
 C = json.loads((HERE / "cifras.json").read_text(encoding="utf-8"))
 OUT = HERE / "Informe_SplitSteal.docx"
 
 AUTHOR = "Jacobo Migoya"
-DATE = "Noviembre de 2026"
+DATE = "Octubre de 2026"
 
 INK = RGBColor(0x0B, 0x0B, 0x0B)
 INK_2 = RGBColor(0x52, 0x51, 0x4E)
@@ -178,9 +181,12 @@ class Informe:
         r.font.size = Pt(8.5)
         r.font.color.rgb = label[1]
         p.paragraph_format.space_after = Pt(4)
+        p.paragraph_format.keep_with_next = True      # la etiqueta no se separa de su texto
 
-    def p(self, text, **kw):
-        return add_runs(self.doc.add_paragraph(), text, **kw)
+    def p(self, text, keep_with_next=False, **kw):
+        par = add_runs(self.doc.add_paragraph(), text, **kw)
+        par.paragraph_format.keep_with_next = keep_with_next
+        return par
 
     def bullets(self, items):
         for it in items:
@@ -212,8 +218,8 @@ class Informe:
             add_runs(cell.add_paragraph(), para)
         self.doc.add_paragraph().paragraph_format.space_after = Pt(2)
 
-    def vida_real(self, text):
-        self.box("En la vida real", text)
+    def vida_real(self, text, title="En la vida real"):
+        self.box(title, text)
 
     def curiosos(self, text):
         self.box("Para curiosos (técnico)", text, fill="FDF0EA", title_color=ORANGE)
@@ -248,6 +254,42 @@ class Informe:
                 row.cells[j].width = Cm(w)
         self.doc.add_paragraph().paragraph_format.space_after = Pt(2)
 
+    def cards(self, names, accent):
+        """Fichas de personajes: dos por fila, [imagen | nombre, apodo y cómo juega]."""
+        from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT
+        rows = (len(names) + 1) // 2
+        t = self.doc.add_table(rows=rows, cols=4)
+        t.alignment = WD_TABLE_ALIGNMENT.CENTER
+        widths = [2.1, 6.1, 2.1, 6.1]
+        for k, name in enumerate(names):
+            nick, how, _, _ = CHARACTERS[name]
+            row, col = divmod(k, 2)
+            img_cell, txt_cell = t.cell(row, 2 * col), t.cell(row, 2 * col + 1)
+            for cell in (img_cell, txt_cell):
+                cell_borders(cell, "FFFFFF")
+                cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
+            ip = img_cell.paragraphs[0]
+            ip.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            ip.add_run().add_picture(str(FIGS / "personajes" / f"{name}.png"), width=Cm(1.75))
+            tp = txt_cell.paragraphs[0]
+            tp.paragraph_format.space_after = Pt(0)
+            r = tp.add_run(name)
+            r.bold = True
+            r.font.size = Pt(10)
+            np_ = txt_cell.add_paragraph()
+            np_.paragraph_format.space_after = Pt(1)
+            r = np_.add_run(nick)
+            r.bold = True
+            r.font.size = Pt(9)
+            r.font.color.rgb = accent
+            hp = txt_cell.add_paragraph()
+            hp.paragraph_format.space_after = Pt(0)
+            add_runs(hp, how, size=8.5, color=INK_2)
+        for row in t.rows:
+            for j, w in enumerate(widths):
+                row.cells[j].width = Cm(w)
+        self.doc.add_paragraph().paragraph_format.space_after = Pt(2)
+
     def page_break(self):
         self.doc.add_paragraph().add_run().add_break(WD_BREAK.PAGE)
 
@@ -264,6 +306,15 @@ class Informe:
 # Contenido
 # =============================================================================
 
+def group_names(kind):
+    """Estrategias del roster oficial de un tipo ("amable", "traicionera" u "otra"), en el
+    orden de las fichas de personajes."""
+    def kind_of(name):
+        tags = CATALOG[name].tags
+        return "amable" if "amable" in tags else ("traicionera" if "traicionera" in tags else "otra")
+    return [n for n in CHARACTERS if n in PRESETS["full"] and kind_of(n) == kind]
+
+
 def e(strategy, noise, world):
     return C["entornos"][f"{strategy}|{noise}|{world}"]
 
@@ -273,7 +324,7 @@ def build():
     d = R.doc
 
     # ------------------------------------------------------------------ portada
-    for _ in range(5):
+    for _ in range(3):
         d.add_paragraph()
     t = d.add_paragraph(style="Title")
     t.add_run("Cooperar, traicionar o perdonar")
@@ -283,7 +334,12 @@ def build():
     d.add_paragraph()
     add_runs(d.add_paragraph(), f"**{AUTHOR}**", size=12)
     add_runs(d.add_paragraph(), DATE, size=11, color=INK_2)
-    for _ in range(8):
+    for _ in range(3):
+        d.add_paragraph()
+    # Ilustración: algunas de las protagonistas (personajes de personajes.py)
+    d.add_picture(str(FIGS / "portada.png"), width=Cm(16.4))
+    d.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+    for _ in range(3):
         d.add_paragraph()
     add_runs(d.add_paragraph(),
              "Informe del proyecto Split/Steal: un simulador en Python de torneos del juego "
@@ -293,16 +349,19 @@ def build():
 
     # ------------------------------------------------------------------ cómo leer
     R.plain_title("Cómo leer este informe")
-    R.p("Este informe está pensado para leerse como quien ve un vídeo de divulgación: "
-        "sin fórmulas y yendo al grano. Cada sección lleva una etiqueta:")
+    R.p("Como persona que se ha metido en muchos informes de este estilo y ha salido totalmente "
+        "bloqueada y sin aprender por la avalancha de información y los tecnicismos, te dejo aquí "
+        "una pequeña guía que creo que te será de ayuda.")
+    R.p("Por el documento hay etiquetas en los apartados de lectura ligera y de para más curiosos; "
+        "utilízalas como quieras:")
     R.bullets([
-        "**LECTURA LIGERA:** la idea, las gráficas y qué significa en la vida real. Si solo "
+        "**Lectura ligera:** la idea, las gráficas y qué significa en la vida real. Si solo "
         "quieres las conclusiones, quédate con estas.",
-        "**PARA CURIOSOS:** cómo está hecho por dentro y los detalles de las simulaciones. "
+        "**Para más curiosos:** cómo está hecho por dentro y los detalles de las simulaciones. "
         "Se pueden saltar sin perder el hilo.",
     ])
-    R.p("Además, cada sección responde a **una pregunta**. Si vienes a por una respuesta "
-        "concreta, búscala aquí:")
+    R.p("Además, cada sección responde a **una pregunta**. ¡Si vienes a por una respuesta "
+        "concreta, búscala aquí!")
     R.table(["Si te preguntas…", "Ve a"], [
         ["¿Qué es esto y por qué importa?", "1. ¿De qué va esto?"],
         ["¿Quién gana, cooperar o traicionar?", "4. ¿Quién gana?"],
@@ -319,20 +378,22 @@ def build():
     ], widths=[10.2, 6.2])
     R.page_break()
     R.plain_title("Índice")
-    R.p("(Si el índice aparece vacío, haz clic derecho sobre él y elige «Actualizar campo».)",
-        size=9, color=INK_2)
     R.toc()
     R.page_break()
 
     # ------------------------------------------------------------------ 0 resumen
     R.h1("0. Resumen en 2 minutos", "ligera")
-    R.p("Dos personas eligen a la vez entre **cooperar** o **traicionar**. Si las dos cooperan, "
-        "ganan bastante; si una traiciona a la otra, la traidora gana mucho y la otra nada; si las "
-        "dos traicionan, ganan muy poco. Es el famoso **dilema del prisionero**, y aparece por todas "
-        "partes: países, empresas, compañeros de piso, animales…")
-    R.p("He programado **36 personalidades** distintas (desde la que coopera siempre hasta la que "
-        "traiciona siempre, pasando por vengativas, rencorosas, perdonadoras o tramposas) y las he "
-        "puesto a competir en **miles de torneos simulados**. Esto es lo que sale:")
+    R.p("Dos personas eligen a la vez entre **cooperar** o **traicionar**.")
+    R.bullets([
+        "Si las dos cooperan, ganan bastante.",
+        "Si una traiciona a la otra, la traidora gana mucho y la otra nada.",
+        "Si las dos traicionan, ganan muy poco.",
+    ])
+    R.p("Es el famoso **dilema del prisionero**, y aparece por todas partes: países, empresas, "
+        "compañeros de piso, animales… He programado **36 personalidades** distintas (desde la que "
+        "coopera siempre hasta la que traiciona siempre, pasando por vengativas, rencorosas, "
+        "perdonadoras o tramposas) y las he puesto a competir en **miles de torneos simulados**. "
+        "Esto es lo que sale:")
     R.numbered([
         "**Ser amable funciona.** Las que nunca traicionan primero ocupan de media el puesto "
         f"{num(C['rank_amables'])}; las demás, el {num(C['rank_no_amables'])}.",
@@ -350,8 +411,8 @@ def build():
         "**La cooperación puede conquistar un mundo egoísta.** Basta con que empiece un "
         f"{num(C['masa_critica_pct'], 1)} % de cooperadoras para que acaben siendo el 100 %.",
     ])
-    R.p("La idea de fondo: casi nada en la vida es un juego de suma cero. Para ganar no hace falta "
-        "que otro pierda; hace falta encontrar con quién crear valor juntos.")
+    R.p("La idea de fondo es que casi nada en la vida es un juego de suma cero. Para ganar no hace "
+        "falta que otro pierda, solo hace falta encontrar con quién crear valor juntos.")
     R.page_break()
 
     # ------------------------------------------------------------------ 1
@@ -382,7 +443,7 @@ def build():
         "ganáis menos las dos (una «guerra de precios»).",
         "**Golden Balls.** El nombre Split/Steal viene de un concurso de la televisión británica en el que, al "
         "final, dos concursantes elegían «Split» o «Steal» para repartirse (o no) un bote de dinero.",
-    ])
+    ], title="Algunos ejemplos en la vida real")
     R.h2("¿Qué es una estrategia?")
     R.p("Una **estrategia** es una regla para decidir qué hacer, mirando lo que ha pasado antes en el "
         "partido. Por ejemplo, **TitForTat** («ojo por ojo») empieza cooperando y después copia lo último que "
@@ -430,19 +491,15 @@ def build():
     R.h1("3. Las 36 personalidades", "ligera")
     R.p(f"Cada estrategia tiene rasgos. Hay **{C['n_amables']} amables** (nunca traicionan primero) y "
         f"**{C['n_traicioneras']} traicioneras** (pueden traicionar sin motivo); el resto usan el azar sin "
-        "llegar a ninguno de los dos extremos. Algunas de las más importantes en esta historia:")
-    R.table(["Estrategia", "Cómo juega", "En humano"], [
-        ["TitForTat", "Empieza cooperando y copia lo último que hizo el rival", "Justa: me tratas, te trato"],
-        ["GrimTrigger", "Coopera hasta la primera traición; luego, nunca más", "Rencorosa: no perdona nunca"],
-        ["GenerousTitForTat", "Como TitForTat, pero perdona 1 de cada 3 traiciones", "Generosa"],
-        ["ForgivingTitForTat", "Como TitForTat, pero perdona 1 de cada 10", "Justa con margen"],
-        ["Gradual", "Castiga más cuanto más le traicionan y luego ofrece paz", "Firme pero conciliadora"],
-        ["MimicMajority", "Hace lo que el rival ha hecho más veces en el partido", "Juzga por la trayectoria"],
-        ["WinStayLoseShift", "Si le fue bien, repite; si le fue mal, cambia", "Pragmática (Pavlov)"],
-        ["AlwaysSplit", "Coopera siempre", "La santa (o la ingenua)"],
-        ["AlwaysSteal", "Traiciona siempre", "El aprovechado"],
-        ["Prober / Joss", "Tantean o traicionan por sorpresa de vez en cuando", "Las tramposas"],
-    ], widths=[3.8, 7.4, 5.2])
+        "llegar a ninguno de los dos extremos. Aquí las tienes a todas, cada una con su apodo y su "
+        "forma de jugar:")
+    R.h3("Las amables")
+    R.cards(group_names("amable"), BLUE)
+    R.h3("Las que dependen del azar")
+    R.cards(group_names("otra"), INK_2)
+    R.h3("Las traicioneras")
+    R.cards(group_names("traicionera"), ORANGE)
+    R.p("Y en un solo vistazo, los rasgos de todas:", keep_with_next=True)
     R.fig("f01_personalidades", "Los rasgos de cada una de las 36 estrategias del roster oficial.", width=12.5)
 
     # ------------------------------------------------------------------ 4
@@ -474,9 +531,9 @@ def build():
         f"partidos… y queda de media en el puesto **{num(C['tft_rank'])}**.")
     R.fig("f04_ganar_partidos", "Porcentaje de partidos ganados frente a posición media. Las que más ganan "
                                 "partidos (derecha) no son las que mejor quedan (arriba).", width=14)
-    R.p("¿Cómo puede ser? Porque los puntos no te los da el rival: te los da el juego. Cuando AlwaysSteal "
+    R.p("¿Cómo puede ser? Porque los puntos no te los da el rival, te los da el juego. Cuando AlwaysSteal "
         "juega contra alguien que se defiende, los dos acaban sacando 1 punto por ronda. Dos cooperadoras, en "
-        "cambio, se llevan 3 cada una. Contra TitForTat, AlwaysSteal «gana» por 1,04 a 0,99 puntos por ronda; dos TitForTat «empatan» a 3.")
+        "cambio, se llevan 3 cada una. Contra TitForTat, AlwaysSteal gana por 1,04 a 0,99 puntos por ronda; dos TitForTat empatan a 3.")
     R.fig("f05_heatmap", "¿Quién gana a quién? Cada celda: puntos por ronda de la fila menos los de la "
                          "columna. Azul: la fila gana; rojo: pierde. Las de arriba ganan a casi todas… y "
                          "aun así no son las mejores del torneo.", width=15.5)
@@ -572,8 +629,7 @@ def build():
         ["5 % de errores"] + [num(pr[f"{k}|0.05"]) for k in ["0.0", "0.1", "0.2", "0.333333", "0.5", "1.0"]],
     ], widths=[3.4] + [2.17] * 6)
     R.p("El resultado: **lo mejor es perdonar poco, alrededor de 1 de cada 10 traiciones** (p = 0,1), con y "
-        "sin errores. No perdonar nunca es algo peor, y perdonar mucho es claramente peor. Es justo el número "
-        "que menciona el vídeo de Veritasium para romper los ecos: un 10 % de perdón.")
+        "sin errores. No perdonar nunca es algo peor, y perdonar mucho es claramente peor.")
     a5 = C["alwayssteal_segun_perdon_ruido5"]
     R.p(f"Además, **el perdón tiene efectos sobre los demás**: con errores, cuanto más perdona esta estrategia, "
         f"mejor le va a AlwaysSteal (del puesto {num(a5['0.0'])} al {num(a5['1.0'])}). El perdón ilimitado "
@@ -631,7 +687,7 @@ def build():
     R.fig("f14_sorteo", "Qué criterio decide quién baja de la Liga 1, sin errores y con un 5 % de errores.", width=13)
     R.h2("El ascensor de las traicioneras")
     R.p("Las traicioneras viven en un ascensor. Suben desde las ligas de abajo, donde hay ingenuas a las que "
-        "explotar; al llegar a la zona media se encuentran con estrategias que se defienden, y bajan. Y vuelta a empezar:")
+        "explotar. Al llegar a la zona media se encuentran con estrategias que se defienden, y bajan. Y vuelta a empezar:")
     R.fig("f13_ascensor", "Liga de cuatro estrategias temporada a temporada en un torneo (semilla 42).", width=14)
     R.vida_real("Las reglas de la competición deciden quién gana tanto como los competidores. Un sistema de "
                 "ascensos premia ganar a los de tu nivel; un todos contra todos premia ser bueno contra todos. Y "
@@ -727,7 +783,7 @@ def build():
         "**Cincuenta repeticiones** dan márgenes de error pequeños, pero algunas diferencias (por ejemplo, perdonar "
         "un 10 % o un 20 %) quedan dentro de ese margen.",
     ])
-    R.p("Próximos pasos posibles: partidos de duración aleatoria, errores de percepción, evolución con "
+    R.p("Próximos pasos posibles que introduciré son partidos de duración aleatoria, errores de percepción, evolución con "
         "mutaciones, poblaciones en un espacio (vecindarios), torneos con estrategias propuestas por otras "
         "personas y una pequeña interfaz gráfica para jugar con el simulador sin programar.")
 
