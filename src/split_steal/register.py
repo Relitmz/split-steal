@@ -16,6 +16,7 @@ Tres piezas:
       build_roster("clasicas")
       build_roster(["TitForTat", "AlwaysSteal", "ForgivingTitForTat(p=0.2)"])
       build_roster("TitForTat, AlwaysSteal, ForgivingTitForTat(p=0.2)")   # igual, en un texto
+      build_roster("clasicas, -AlwaysSteal, +Extortioner")                # preset menos una más otra
 
 Decisiones de diseño:
 - Cada llamada crea instancias NUEVAS. Las estrategias acumulan estadísticas
@@ -170,18 +171,37 @@ def resolve_selection(selection: Selection) -> List[str]:
 
     - Un nombre de preset ("clasicas") -> su lista.
     - Un texto con comas ("TitForTat, AlwaysSteal") -> esa lista.
-    - Una lista -> cada elemento puede ser una estrategia o, a su vez, un preset
-      (así se puede escribir ["cooperativas", "Extortioner"]).
+    - Una lista -> cada elemento puede ser una estrategia o, a su vez, un preset.
+
+    Los elementos se aplican EN ORDEN y pueden llevar signo:
+      - sin signo o con "+": se AÑADEN (una estrategia o todo un preset);
+      - con "-": se QUITAN las que tengan ese nombre (o todas las de ese preset).
+
+        "clasicas, -AlwaysSteal, +Extortioner"   -> las 12 clásicas sin AlwaysSteal y con Extortioner
+        "full, -clasicas"                        -> las 36 menos las 12 clásicas
+
+    Quitar algo que no está es un error (casi siempre es una errata).
     """
     if isinstance(selection, str):
-        if selection.strip() in PRESETS:
-            return list(PRESETS[selection.strip()])
         items = _split_top_level(selection)
     else:
-        items = list(selection)
+        items = [item.strip() for item in selection]
+
     specs: List[str] = []
     for item in items:
-        specs.extend(PRESETS[item] if item in PRESETS else [item])
+        sign, body = ("-", item[1:].strip()) if item.startswith("-") else \
+                     ("+", item[1:].strip() if item.startswith("+") else item)
+        group = PRESETS[body] if body in PRESETS else [body]
+        if sign == "+":
+            specs.extend(group)
+            continue
+        to_remove = {make_strategy(spec).name for spec in group}
+        present = {make_strategy(spec).name for spec in specs}
+        missing = sorted(to_remove - present)
+        if missing:
+            raise ValueError(f"No se puede quitar {', '.join(missing)}: no está en la selección "
+                             f"hasta ese punto ('{item}')")
+        specs = [spec for spec in specs if make_strategy(spec).name not in to_remove]
     return specs
 
 

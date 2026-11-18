@@ -60,7 +60,8 @@ def summarize(matches: pd.DataFrame) -> pd.DataFrame:
 
 
 ROSTER_HELP = ('Preset (full, clasicas, cooperativas, cooperativas_con_traidores, prueba) '
-               'o lista separada por comas, p. ej. "TitForTat, AlwaysSteal, ForgivingTitForTat(p=0.2)"')
+               'o lista separada por comas, p. ej. "TitForTat, ForgivingTitForTat(p=0.2)". '
+               'Se pueden sumar y restar: "clasicas, -AlwaysSteal, +Extortioner"')
 
 
 def _build(selection: str):

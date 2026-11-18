@@ -69,6 +69,26 @@ def test_selection_from_text_list_and_mixed_presets():
     assert len(mixed) == 13 and isinstance(mixed["Extortioner"], Extortioner)
 
 
+def test_selection_can_add_and_remove_from_presets():
+    sel = resolve_selection("clasicas, -AlwaysSteal, +Extortioner")
+    assert len(sel) == 12 and "AlwaysSteal" not in sel and sel[-1] == "Extortioner"
+    # Quitar un preset entero
+    rest = resolve_selection(["full", "-clasicas"])
+    assert len(rest) == 36 - 12 and not set(rest) & set(PRESETS["clasicas"])
+    # Se quita por NOMBRE: "ForgivingTitForTat(p=0.1)" es la versión por defecto
+    assert "ForgivingTitForTat" not in resolve_selection("cooperativas, -ForgivingTitForTat(p=0.1)")
+    # Con parámetro distinto es otra estrategia: se puede cambiar una versión por otra
+    swapped = resolve_selection("cooperativas, -ForgivingTitForTat, ForgivingTitForTat(p=0.3)")
+    assert "ForgivingTitForTat(p=0.3)" in swapped and "ForgivingTitForTat" not in swapped
+
+
+def test_removing_something_absent_is_an_error():
+    with pytest.raises(ValueError, match="No se puede quitar Extortioner"):
+        resolve_selection("clasicas, -Extortioner")
+    with pytest.raises(ValueError, match="desconocida"):
+        resolve_selection("clasicas, -NoExiste")
+
+
 def test_duplicates_are_rejected():
     with pytest.raises(ValueError, match="repetido"):
         build_roster("TitForTat, TitForTat")
