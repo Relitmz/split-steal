@@ -231,3 +231,8 @@ experiment.toml ─► variantes (TournamentConfig) × semillas ─► run_many 
 ```bash
 pytest
 ```
+
+## Licencia
+
+[MIT](LICENSE) © 2026 Jacobo Migoya. Puedes usar, modificar y compartir el código libremente,
+manteniendo el aviso de copyright.
